@@ -1,0 +1,56 @@
+Throbber {
+    width: 100%;
+    height: 1;    
+    overlay: screen;
+    visibility: hidden;
+    &.-busy {
+        visibility: visible;
+    }   
+}
+
+Conversation {
+    height: 1fr;
+    max-width: 100;    
+    background: black 10%;
+    Prompt {
+        dock: bottom;
+        width: 1fr; 
+        TextArea {
+            height: auto;
+        }  
+    }
+
+}
+
+
+Welcome {
+    height: auto;
+    min-height: 100%;
+    # Center {
+        
+    # }
+    #logo {
+        color: $success;        
+    }
+    & > #message {
+        width: 1fr;
+        height: auto;
+    }
+}
+
+Prompt {
+    CondensedPath {
+        width: 1fr;
+        height: 1;
+        text-wrap: nowrap;
+        color: $warning;
+        margin: 0 1;
+        
+    }
+}
+
+MainScreen {
+    # hatch: right $foreground 10%;
+    align: center top;
+    background: $background;
+}
