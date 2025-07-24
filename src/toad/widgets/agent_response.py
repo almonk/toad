@@ -1,5 +1,5 @@
 import asyncio
-import llm
+
 from llm import Model
 
 from textual import work
@@ -25,7 +25,7 @@ class AgentResponse(Markdown):
     def send_prompt(self, prompt: str) -> None:
         """Get the response in a thread."""
         self.post_message(messages.WorkStarted())
-        llm_response = self.model.prompt(prompt)
+        llm_response = self.model.prompt(prompt, system=SYSTEM)
         for chunk in llm_response:
             self.app.call_from_thread(self._add_chunk, chunk)
         self.post_message(messages.WorkFinished())

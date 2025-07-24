@@ -9,7 +9,7 @@ from textual.color import Color, Gradient
 
 from textual.style import Style
 from textual.strip import Strip
-from textual.selection import Selection
+from textual.visual import RenderOptions
 from textual.widget import Widget
 from textual.css.styles import RulesMap
 
@@ -40,26 +40,15 @@ class ThrobberVisual(Visual):
     gradient = Gradient.from_colors(*[Color.parse(color) for color in COLORS])
 
     def render_strips(
-        self,
-        get_style: Callable[[str | Style], Style],
-        rules: RulesMap,
-        width: int,
-        height: int | None,
-        style: Style,
-        selection: Selection | None = None,
-        selection_style: Style | None = None,
-        post_style: Style | None = None,
+        self, width: int, height: int | None, style: Style, options: RenderOptions
     ) -> list[Strip]:
         """Render the Visual into an iterable of strips.
 
         Args:
-            rules: A mapping of style rules, such as the Widgets `styles` object.
             width: Width of desired render.
             height: Height of desired render or `None` for any height.
             style: The base style to render on top of.
-            selection: Selection information, if applicable, otherwise `None`.
-            selection_style: Selection style if `selection` is not `None`.
-            post_style: Optional style to apply post render.
+            options: Additional render options.
 
         Returns:
             An list of Strips.
