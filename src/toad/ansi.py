@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 import io
 from contextlib import suppress
-import re
 from typing import Generator, Iterable, NamedTuple
 from textual.color import Color
-from textual.style import Style
+from textual.style import Style, NULL_STYLE
 from textual.content import Content
 
 from toad._stream_parser import (
+    MatchToken,
     StreamParser,
     SeparatorToken,
     StreamRead,
@@ -21,6 +22,8 @@ from toad._stream_parser import (
 
 
 class CSIPattern(Pattern):
+    """Control Sequence Introducer."""
+
     PARAMETER_BYTES = frozenset([chr(codepoint) for codepoint in range(0x30, 0x3F + 1)])
     INTERMEDIATE_BYTES = frozenset(
         [chr(codepoint) for codepoint in range(0x20, 0x2F + 1)]
@@ -37,21 +40,21 @@ class CSIPattern(Pattern):
             return f"\x1b[{self.parameter}{self.intermediate}{self.final}"
 
     def check(self) -> PatternCheck:
-        parameter = io.StringIO()
-        intermediate = io.StringIO()
-
-        parameter_bytes = self.PARAMETER_BYTES
-
+        """Check a CSI pattern."""
         if (yield) != "[":
             return False
 
+        parameter = io.StringIO()
+        intermediate = io.StringIO()
+        parameter_bytes = self.PARAMETER_BYTES
+
         while (character := (yield)) in parameter_bytes:
             parameter.write(character)
-        intermediate_bytes = self.INTERMEDIATE_BYTES
 
         if character in self.FINAL_BYTE:
             return self.Match(parameter.getvalue(), "", character)
 
+        intermediate_bytes = self.INTERMEDIATE_BYTES
         while True:
             intermediate.write(character)
             if (character := (yield)) not in intermediate_bytes:
@@ -78,73 +81,70 @@ class OSCPattern(Pattern):
         return self.Match("]")
 
 
-SGR_STYLE_MAP = {
-    1: "bold",
-    2: "dim",
-    3: "italic",
-    4: "underline",
-    5: "blink",
-    6: "blink2",
-    7: "reverse",
-    8: "conceal",
-    9: "strike",
-    21: "underline2",
-    22: "not dim not bold",
-    23: "not italic",
-    24: "not underline",
-    25: "not blink",
-    26: "not blink2",
-    27: "not reverse",
-    28: "not conceal",
-    29: "not strike",
-    30: "ansi_black",
-    31: "ansi_red",
-    32: "ansi_green",
-    33: "ansi_yellow",
-    34: "ansi_blue",
-    35: "ansi_magenta",
-    36: "ansi_cyan",
-    37: "ansi_white",
-    39: "default",
-    40: "on ansi_black",
-    41: "on ansi_red",
-    42: "on ansi_green",
-    43: "on ansi_yellow",
-    44: "on ansi_blue",
-    45: "on ansi_magenta",
-    46: "on ansi_cyan",
-    47: "on ansi_white",
-    49: "on default",
-    51: "frame",
-    52: "encircle",
-    53: "overline",
-    54: "not frame not encircle",
-    55: "not overline",
-    90: "ansi_bright_black",
-    91: "ansi_bright_red",
-    92: "ansi_bright_green",
-    93: "ansi_bright_yellow",
-    94: "ansi_bright_blue",
-    95: "ansi_bright_magenta",
-    96: "ansi_bright_cyan",
-    97: "ansi_bright_white",
-    100: "on ansi_bright_black",
-    101: "on ansi_bright_red",
-    102: "on ansi_bright_green",
-    103: "on ansi_bright_yellow",
-    104: "on ansi_bright_blue",
-    105: "on ansi_bright_magenta",
-    106: "on ansi_bright_cyan",
-    107: "on ansi_bright_white",
+SGR_STYLE_MAP: dict[int, Style] = {
+    1: Style(bold=True),
+    2: Style(dim=True),
+    3: Style(italic=True),
+    4: Style(underline=True),
+    5: Style(blink=True),
+    6: Style(blink=True),
+    7: Style(reverse=True),
+    8: Style(reverse=True),
+    9: Style(strike=True),
+    21: Style(underline2=True),
+    22: Style(dim=False, bold=False),
+    23: Style(italic=False),
+    24: Style(underline=False),
+    25: Style(blink=False),
+    26: Style(blink=False),
+    27: Style(reverse=False),
+    28: NULL_STYLE,  # "not conceal",
+    29: Style(strike=False),
+    30: Style(foreground=Color(0, 0, 0, ansi=0)),
+    31: Style(foreground=Color(128, 0, 0, ansi=1)),
+    32: Style(foreground=Color(0, 128, 0, ansi=2)),
+    33: Style(foreground=Color(128, 128, 0, ansi=3)),
+    34: Style(foreground=Color(0, 0, 128, ansi=4)),
+    35: Style(foreground=Color(128, 0, 128, ansi=5)),
+    36: Style(foreground=Color(0, 128, 128, ansi=6)),
+    37: Style(foreground=Color(192, 192, 192, ansi=7)),
+    39: Style(foreground=Color(0, 0, 0, ansi=-1)),
+    40: Style(background=Color(0, 0, 0, ansi=0)),
+    41: Style(background=Color(128, 0, 0, ansi=1)),
+    42: Style(background=Color(0, 128, 0, ansi=2)),
+    43: Style(background=Color(128, 128, 0, ansi=3)),
+    44: Style(background=Color(0, 0, 128, ansi=4)),
+    45: Style(background=Color(128, 0, 128, ansi=5)),
+    46: Style(background=Color(0, 128, 128, ansi=6)),
+    47: Style(background=Color(192, 192, 192, ansi=7)),
+    49: Style(background=Color(0, 0, 0, ansi=-1)),
+    51: NULL_STYLE,  # "frame",
+    52: NULL_STYLE,  # "encircle",
+    53: NULL_STYLE,  # "overline",
+    54: NULL_STYLE,  # "not frame not encircle",
+    55: NULL_STYLE,  # "not overline",
+    90: Style(foreground=Color(128, 128, 128, ansi=8)),
+    91: Style(foreground=Color(255, 0, 0, ansi=9)),
+    92: Style(foreground=Color(0, 255, 0, ansi=10)),
+    93: Style(foreground=Color(255, 255, 0, ansi=11)),
+    94: Style(foreground=Color(0, 0, 255, ansi=12)),
+    95: Style(foreground=Color(255, 0, 255, ansi=13)),
+    96: Style(foreground=Color(0, 255, 255, ansi=14)),
+    97: Style(foreground=Color(255, 255, 255, ansi=15)),
+    100: Style(background=Color(128, 128, 128, ansi=8)),
+    101: Style(background=Color(255, 0, 0, ansi=9)),
+    102: Style(background=Color(0, 255, 0, ansi=10)),
+    103: Style(background=Color(255, 255, 0, ansi=11)),
+    104: Style(background=Color(0, 0, 255, ansi=12)),
+    105: Style(background=Color(255, 0, 255, ansi=13)),
+    106: Style(background=Color(0, 255, 255, ansi=14)),
+    107: Style(background=Color(255, 255, 255, ansi=15)),
 }
 
 
 @dataclass
 class ANSIToken:
     text: str
-
-    def __str__(self) -> str:
-        return self.text
 
 
 class Separator(ANSIToken):
@@ -185,10 +185,8 @@ class ANSIParser(StreamParser):
                         elif isinstance(value, OSCPattern.Match):
                             osc_data: list[str] = []
                             while True:
-                                token = yield self.read_until("\x1b", "\0x7")
-                                if isinstance(token, SeparatorToken):
-                                    if token.text == ESCAPE:
-                                        yield self.read(1)
+                                token = yield self.read_regex(r"[\x1b\0x7]\\")
+                                if isinstance(token, MatchToken):
                                     break
                                 osc_data.append(token.text)
 
@@ -476,26 +474,30 @@ class ANSIStream:
         self.style = Style()
 
     @classmethod
-    def parse_sgr(cls, sgr: str, style: Style) -> Style:
+    @lru_cache(maxsize=1024)
+    def parse_sgr(cls, sgr: str) -> Style | None:
         codes = [
             min(255, int(_code) if _code else 0)
             for _code in sgr.split(";")
             if _code.isdigit() or _code == ""
         ]
+        style = NULL_STYLE
         iter_codes = iter(codes)
         for code in iter_codes:
             if code == 0:
                 # reset
-                style = Style.null()
+                return None
             elif code in SGR_STYLE_MAP:
                 # styles
-                style += Style.parse(SGR_STYLE_MAP[code])
+                style += SGR_STYLE_MAP[code]
             elif code == 38:
                 #  Foreground
                 with suppress(StopIteration):
                     color_type = next(iter_codes)
                     if color_type == 5:
-                        style += Style.parse(ANSI_COLORS[next(iter_codes)])
+                        style += Style(
+                            foreground=Color.parse(ANSI_COLORS[next(iter_codes)])
+                        )
                     elif color_type == 2:
                         style += Style(
                             foreground=Color(
@@ -510,7 +512,9 @@ class ANSIStream:
                 with suppress(StopIteration):
                     color_type = next(iter_codes)
                     if color_type == 5:
-                        style += Style.parse("on " + ANSI_COLORS[next(iter_codes)])
+                        style += Style(
+                            background=Color.parse(ANSI_COLORS[next(iter_codes)])
+                        )
                     elif color_type == 2:
                         style += Style(
                             background=Color(
@@ -529,6 +533,9 @@ class ANSIStream:
         if isinstance(token, Separator):
             if token.text == "\n":
                 yield ANSISegment(0, 1)
+            else:
+                # TODO: Bell, carriage return etc
+                pass
 
         elif isinstance(token, OSC):
             osc = token.text
@@ -540,13 +547,17 @@ class ANSIStream:
 
         elif isinstance(token, CSI):
             if token.text.endswith("m"):
-                self.style = self.parse_sgr(token.text[2:-1], self.style)
+                sgr_style = self.parse_sgr(token.text[2:-1])
+                if sgr_style is None:
+                    self.style = NULL_STYLE
+                else:
+                    self.style += sgr_style
 
         else:
             if self.style:
-                content = Content.styled(str(token), self.style)
+                content = Content.styled(token.text, self.style)
             else:
-                content = Content(str(token))
+                content = Content(token.text)
             yield ANSISegment(content.cell_length, 0, content)
 
 

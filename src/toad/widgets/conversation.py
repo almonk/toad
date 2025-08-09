@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import cached_property
+import os
 from typing import TYPE_CHECKING
 import asyncio
 from contextlib import suppress
@@ -631,10 +632,16 @@ class Conversation(containers.Vertical):
         with open("run", mode="wt", encoding="utf-8") as source:
             source.write(code)
 
+        env = os.environ.copy()
+        env["COLUMNS"] = str(self.size.width - 4)
+        env["LINES"] = "24"
+        env["TTY_COMPATIBLE"] = "1"
+
         process = await asyncio.create_subprocess_shell(
             command,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            env=env,
         )
         while data := await process.stdout.readline():
             line = data.decode("utf-8")

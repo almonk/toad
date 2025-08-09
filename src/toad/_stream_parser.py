@@ -149,12 +149,22 @@ class StreamParser:
         return Read(count)
 
     def read_until(self, *characters: str) -> ReadUntil:
+        """Read until the given characters."""
         return ReadUntil(*characters)
 
     def read_regex(self, regex: str) -> ReadRegex:
+        """Search for the matching regex."""
         return ReadRegex(regex)
 
     def read_patterns(self, start: str = "", **patterns) -> ReadPatterns:
+        """Read until a pattern matches, or the patterns have been exhausted.
+
+        Args:
+            start: Initial part of the string.
+            **patterns: One or more patterns.
+
+
+        """
         return ReadPatterns(start, **patterns)
 
     def feed(self, text: str) -> Iterable[Token]:
@@ -204,9 +214,6 @@ class StreamParser:
                     text = ""
 
             elif isinstance(self._reading, ReadRegex):
-                # if (max_length := self._reading.max_length) is not None:
-                #     remaining = max_length - self._reading.buffer_size
-                #     new_text = text[:remaining]
                 self._reading._buffer.write(text)
                 match_text = self._reading._buffer.getvalue()
                 if (

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 from typing import Sequence, NamedTuple
 
 
@@ -34,6 +35,7 @@ class ANSILog(ScrollView, can_focus=True):
     ANSILog {
         overflow: auto auto;
         scrollbar-gutter: stable;
+        height: 1fr;
     }
     """
 
@@ -72,6 +74,9 @@ class ANSILog(ScrollView, can_focus=True):
     @property
     def last_line_index(self) -> int:
         return self._line_count - 1
+
+    def notify_style_update(self) -> None:
+        self._clear_caches()
 
     # def get_content_width(self, container: Size, viewport: Size) -> int:
     #     return max([line.cell_length for line in self._lines.values()])
@@ -239,7 +244,7 @@ class ANSILog(ScrollView, can_focus=True):
 if __name__ == "__main__":
     from textual import work
     from textual.app import App, ComposeResult
-
+    from rich.console import Console
     import asyncio
 
     class ANSIApp(App):
@@ -255,10 +260,16 @@ if __name__ == "__main__":
         @work
         async def on_mount(self) -> None:
             ansi_log = self.query_one(ANSILog)
+            env = os.environ.copy()
+            env["LINES"] = "24"
+            env["COLUMNS"] = str(self.size.width - 2)
+            env["TTY_COMPATIBLE"] = "1"
+
             process = await asyncio.create_subprocess_shell(
-                "python ansi_mandel.py",
+                "python -m rich",
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                env=env,
             )
             while data := await process.stdout.readline():
                 line = data.decode("utf-8")
