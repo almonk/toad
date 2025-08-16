@@ -426,6 +426,14 @@ class Conversation(containers.Vertical):
                 return cursor_block.get_cursor_block()
         return cursor_block
 
+    def get_cursor_block[BlockType](
+        self, block_type: type[BlockType]
+    ) -> BlockType | None:
+        cursor_block = self.cursor_block_child
+        if isinstance(cursor_block, block_type):
+            return cursor_block
+        return None
+
     @on(messages.WorkStarted)
     def on_work_started(self) -> None:
         self.busy_count += 1
@@ -523,26 +531,27 @@ class Conversation(containers.Vertical):
         agent_response.update(MD)
 
     def on_click(self, event: events.Click) -> None:
-        if event.widget is not None:
-            markdown_block = event.widget
-            try:
-                if not isinstance(
-                    markdown_block, MarkdownBlock
-                ) or not markdown_block.has_class("level-0"):
-                    markdown_block = event.widget.query_ancestor(
-                        "MarkdownBlock.level-0", MarkdownBlock
-                    )
-
-            except NoMatches:
-                pass
-            else:
-                with suppress(ValueError):
-                    clicked_block_index = self.blocks.index(markdown_block)
-                    if self.cursor_offset == clicked_block_index:
-                        pass
-                        # await self.action_select_block()
-                    else:
-                        self.cursor_offset = clicked_block_index
+        widget = event.widget
+        contents = self.contents
+        if widget is None:
+            return
+        if widget in self.children:
+            self.cursor_offset = contents.children.index(widget)
+            self.refresh_block_cursor()
+            return
+        for parent in widget.ancestors:
+            if not isinstance(parent, Widget):
+                break
+            if parent is self or parent is contents:
+                self.cursor_offset = contents.children.index(widget)
+                break
+            if isinstance(parent, BlockProtocol):
+                self.cursor_offset = contents.children.index(parent)
+                parent.block_select(widget)
+                break
+            widget = parent
+        self.refresh_block_cursor()
+        event.stop()
 
     async def post(self, widget: Widget, anchor: bool = True) -> None:
         self._blocks = None
@@ -626,10 +635,11 @@ class Conversation(containers.Vertical):
 
     def focus_prompt(self) -> None:
         self.cursor_offset = -1
+        self.window.scroll_end()
         self.prompt.focus()
 
     async def action_select_block(self) -> None:
-        if (block := self.cursor_block_child) is None:
+        if (block := self.get_cursor_block(MarkdownBlock)) is None:
             return
 
         if block.name is None:

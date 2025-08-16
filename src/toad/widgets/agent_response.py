@@ -66,6 +66,9 @@ class AgentResponse(Markdown):
             return None
         return self.children[self.block_cursor_offset]
 
+    def block_select(self, widget: Widget) -> None:
+        self.block_cursor_offset = self.children.index(widget)
+
     @work
     async def send_prompt(self, prompt: str) -> None:
         stream = Markdown.get_stream(self)
