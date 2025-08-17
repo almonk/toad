@@ -177,9 +177,10 @@ class ANSIParser(StreamParser):
         NEW_LINE = "\n"
         CARRIAGE_RETURN = "\r"
         ESCAPE = "\x1b"
+        BACKSPACE = "\x08"
 
         while True:
-            token = yield self.read_until(NEW_LINE, CARRIAGE_RETURN, ESCAPE)
+            token = yield self.read_until(NEW_LINE, CARRIAGE_RETURN, ESCAPE, BACKSPACE)
 
             if isinstance(token, SeparatorToken):
                 if token.text == ESCAPE:
@@ -569,6 +570,8 @@ class ANSIStream:
                 yield ANSISegment(delta_y=1, absolute_x=0)
             elif separator == "\r":
                 yield ANSISegment(absolute_x=0)
+            elif separator == "\x08":
+                yield ANSISegment(delta_x=-1)
 
         elif isinstance(token, OSC):
             osc = token.text

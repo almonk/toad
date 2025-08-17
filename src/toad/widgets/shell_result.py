@@ -15,19 +15,15 @@ class ShellResult(containers.HorizontalGroup):
     def __init__(
         self,
         command: str,
+        *,
         name: str | None = None,
         id: str | None = None,
         classes: str | None = None,
         disabled: bool = False,
     ) -> None:
         self._command = command
-        self._shell = Shell(self._command)
         super().__init__(name=name, id=id, classes=classes, disabled=disabled)
 
     def compose(self) -> ComposeResult:
         yield NonSelectableLabel("$", id="prompt")
         yield Static(highlight(self._command, language="sh"))
-
-    @work
-    async def run_shell(self, ansi_log: ANSILog) -> None:
-        await self._shell.run(ansi_log)

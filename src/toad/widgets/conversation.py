@@ -32,6 +32,7 @@ from toad.widgets.throbber import Throbber
 from toad.widgets.user_input import UserInput
 from toad.widgets.explain import Explain
 from toad.widgets.run_output import RunOutput
+from toad.shell import Shell
 from toad.slash_command import SlashCommand
 from toad.block_protocol import BlockProtocol
 
@@ -391,8 +392,9 @@ class Conversation(containers.Vertical):
     window = getters.query_one(Window)
     cursor = getters.query_one(Cursor)
     prompt = getters.query_one(Prompt)
-
     app: ToadApp
+
+    shell: var[Shell] = var(Shell)
 
     def compose(self) -> ComposeResult:
         yield Throbber(id="throbber")
@@ -502,6 +504,11 @@ class Conversation(containers.Vertical):
         ]
         self.call_after_refresh(self.post_welcome)
         self.app.settings_changed_signal.subscribe(self, self._settings_changed)
+        self.start_shell()
+
+    @work
+    async def start_shell(self) -> None:
+        await self.shell.run()
 
     def _settings_changed(self, setting_item: tuple[str, str]) -> None:
         key, value = setting_item
@@ -569,9 +576,9 @@ class Conversation(containers.Vertical):
         from toad.widgets.shell_result import ShellResult
         from toad.widgets.ansi_log import ANSILog
 
-        shell_result = await self.post(ShellResult(command))
+        await self.post(ShellResult(command))
         ansi_log = await self.post(ANSILog())
-        self.call_after_refresh(shell_result.run_shell, ansi_log)
+        self.call_after_refresh(self.shell.send, command, ansi_log)
 
     def action_cursor_up(self) -> None:
         if not self.contents.children or self.cursor_offset == 0:

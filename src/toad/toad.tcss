@@ -12,15 +12,23 @@ Throbber {
 
 
 Conversation {
+    
+    Window {
+        margin-right: 1;        
+        scrollbar-gutter: stable;
+        scrollbar-size-vertical: 2;
+    }
 
     &.-scrollbar-thin {
         Window {
+            scrollbar-gutter: stable;
             scrollbar-size-vertical: 1;
         }
         
     }
     &.-scrollbar-hidden {
         Window {
+            scrollbar-gutter: auto;
             scrollbar-size-vertical: 0;
         }
     }
@@ -59,9 +67,6 @@ Conversation {
 
     }
 
-    Window {
-        margin-right: 1;
-    }
 
     #cursor-container {            
         height: auto;
