@@ -273,7 +273,6 @@ class ANSILog(ScrollView, can_focus=False):
         folds = line_record.folds
         self._line_to_fold.append(len(self._folded_lines))
         self._folded_lines.extend(folds)
-        self._update_virtual_size()
 
     def update_line(self, line_index: int, line: Content) -> None:
         while line_index >= len(self._lines):
@@ -303,10 +302,10 @@ class ANSILog(ScrollView, can_focus=False):
                 self._folded_lines.append(fold)
                 refresh_lines += 1
 
-        self._update_virtual_size()
-
-        # self.refresh_lines(fold_line, refresh_lines)
         self.refresh(Region(0, line_no, self._width, refresh_lines))
+
+    def on_idle(self):
+        self._update_virtual_size()
 
     def render_line(self, y: int) -> Strip:
         scroll_x, scroll_y = self.scroll_offset
