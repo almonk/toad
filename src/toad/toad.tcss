@@ -302,8 +302,14 @@ Prompt {
     }
 
     #prompt-container {
+        &:dark {
+            background: black 10%;
+        }
+        &:light {
+            background: white 40%;
+        }
         height: auto;
-        background: black 10%;
+        
         border: tall transparent;
         border-subtitle-align: left;
         border-subtitle-style: reverse;

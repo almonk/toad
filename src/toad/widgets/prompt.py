@@ -376,7 +376,7 @@ class Prompt(containers.VerticalGroup):
             self.prompt_text_area.suggestion = suggestion[len(self.text) :]
 
     def load_suggestions(self, pre_cursor: str, post_cursor: str) -> None:
-        if post_cursor:
+        if post_cursor.strip():
             self.set_auto_completes(None)
             return
         pre_cursor = pre_cursor.casefold()

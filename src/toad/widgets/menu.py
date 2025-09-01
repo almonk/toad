@@ -44,8 +44,8 @@ class Menu(ListView, can_focus=True):
         overlay: screen;  
         position: absolute;
         color: $foreground;
-        background: $panel-darken-1;
-        border: heavy $secondary;
+        background: $panel;
+        border: block $panel;
         constrain: inside inside;
    
         & > MenuOption {         

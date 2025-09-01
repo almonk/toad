@@ -25,10 +25,11 @@ from toad import messages
 from toad.app import ToadApp
 from toad.widgets.menu import Menu
 from toad.widgets.note import Note
-from toad.widgets.prompt import HighlightedTextArea, Prompt
+from toad.widgets.prompt import Prompt
 from toad.widgets.throbber import Throbber
 from toad.widgets.user_input import UserInput
 from toad.widgets.explain import Explain
+from toad.widgets.highlighted_textarea import HighlightedTextArea
 from toad.shell import Shell, CurrentWorkingDirectoryChanged
 from toad.slash_command import SlashCommand
 from toad.protocol import BlockProtocol, MenuProtocol
@@ -328,7 +329,10 @@ class Cursor(Static):
         self.set_interval(0.4, self._update_follow)
 
     def _update_blink(self) -> None:
-        self.blink = not self.blink
+        if self.query_ancestor(Window).has_focus:
+            self.blink = not self.blink
+        else:
+            self.blink = True
 
     def watch_follow_widget(self, widget: Widget | None) -> None:
         self.display = widget is not None
@@ -586,6 +590,7 @@ class Conversation(containers.Vertical):
                 parent is self or parent is contents
             ) and widget in contents.displayed_children:
                 self.cursor_offset = contents.displayed_children.index(widget)
+                self.refresh_block_cursor()
                 break
             if (
                 isinstance(parent, BlockProtocol)
@@ -593,10 +598,11 @@ class Conversation(containers.Vertical):
             ):
                 self.cursor_offset = contents.displayed_children.index(parent)
                 parent.block_select(widget)
+                self.refresh_block_cursor()
                 break
             widget = parent
-        self.call_after_refresh(self.refresh_block_cursor)
-        event.stop()
+        # self.call_after_refresh(self.refresh_block_cursor)
+        # event.stop()
 
     async def post[WidgetType: Widget](
         self, widget: WidgetType, anchor: bool = True
