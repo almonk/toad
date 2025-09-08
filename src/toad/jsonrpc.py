@@ -26,6 +26,14 @@ type JSONList = list[JSONType]
 log = logging.getLogger("jsonrpc")
 
 
+class NoDefault:
+    def __repr__(self) -> str:
+        return "NO_DEFAULT"
+
+
+NO_DEFAULT = NoDefault()
+
+
 class ErrorCode(IntEnum):
     """JSONRPC error codes"""
 
@@ -40,7 +48,7 @@ class ErrorCode(IntEnum):
 @dataclass
 class Parameter:
     type: type
-    default: JSONType
+    default: JSONType | NoDefault
 
 
 @dataclass
@@ -103,20 +111,20 @@ class Server:
     def __init__(self) -> None:
         self._methods: dict[str, Method] = {}
 
-    def call(self, json: JSONObject | JSONList) -> JSONType:
+    async def call(self, json: JSONObject | JSONList) -> JSONType:
         if isinstance(json, dict):
-            return self._dispatch_object(json)
+            return await self._dispatch_object(json)
         else:
-            return self._dispatch_batch(json)
+            return await self._dispatch_batch(json)
 
-    def _dispatch_object(self, json: JSONObject) -> JSONType | None:
+    async def _dispatch_object(self, json: JSONObject) -> JSONType | None:
         json_id = json.get("id")
         if isinstance(json_id, (int, str)):
             request_id = json_id
         else:
             request_id = None
         try:
-            return self._dispatch_object_call(request_id, json)
+            return await self._dispatch_object_call(request_id, json)
         except JSONRPCError as error:
             return {
                 "jsonrpc": "2.0",
@@ -137,7 +145,7 @@ class Server:
                 },
             }
 
-    def _dispatch_object_call(
+    async def _dispatch_object_call(
         self, request_id: int | str | None, json: JSONObject
     ) -> JSONType | None:
         if (jsonrpc := json.get("jsonrpc")) != "2.0":
@@ -167,7 +175,7 @@ class Server:
                 "Invalid request; 'params' attribute should be a list or an object"
             )
 
-        arguments: dict[str, JSONType] = {
+        arguments: dict[str, JSONType | Server | NoDefault] = {
             name: parameter.default for name, parameter in method.parameters.items()
         }
 
@@ -183,10 +191,16 @@ class Server:
                 raise InvalidParams("Parameter is not the expected type", id=request_id)
 
         if isinstance(params, list):
-            for (parameter_name, parameter), value in zip(
-                method.parameters.items(), params
-            ):
-                validate(value, parameter.type)
+            parameter_items = [
+                (name, parameter)
+                for name, parameter in method.parameters.items()
+                if not issubclass(parameter.type, Server)
+            ]
+            for (parameter_name, parameter), value in zip(parameter_items, params):
+                if issubclass(parameter.type, Server):
+                    value = self
+                else:
+                    validate(value, parameter.type)
                 arguments[parameter_name] = value
         else:
             for parameter_name, value in params.items():
@@ -194,8 +208,16 @@ class Server:
                     validate(value, parameter.type)
                     arguments[parameter_name] = value
 
+        for name, parameter in method.parameters.items():
+            if issubclass(parameter.type, Server):
+                arguments[name] = self
+
         try:
-            result = method.callable(**arguments)
+            call_result = method.callable(**arguments)
+            if inspect.isawaitable(call_result):
+                result = await call_result
+            else:
+                result = call_result
         except JSONRPCError as error:
             error.id = request_id
             raise error
@@ -210,12 +232,12 @@ class Server:
         response_object = {"jsonrpc": "2.0", "result": result, "id": request_id}
         return response_object
 
-    def _dispatch_batch(self, json: JSONList) -> list[JSONType]:
+    async def _dispatch_batch(self, json: JSONList) -> list[JSONType]:
         batch_results: list[JSONType] = []
         for request in json:
             if not isinstance(request, dict):
                 continue
-            result = self._dispatch_object(request)
+            result = await self._dispatch_object(request)
             if result is not None:
                 batch_results.append(result)
         return batch_results
@@ -246,11 +268,16 @@ class Server:
             if not name:
                 name = callable.__name__
             name = f"{prefix}{name}"
+
             parameters = {
                 name: Parameter(
-                    eval(parameter.annotation),
                     (
-                        None
+                        parameter.annotation
+                        if isinstance(parameter.annotation, type)
+                        else eval(parameter.annotation)
+                    ),
+                    (
+                        NO_DEFAULT
                         if parameter.default is inspect._empty
                         else parameter.default
                     ),
@@ -297,7 +324,7 @@ class MethodCall[ReturnType]:
             }
         return json
 
-    async def wait(self, timeout: float | None = None) -> ReturnType | None:
+    async def wait(self, timeout: float | None = None) -> ReturnType:
         if self.id is None:
             return None
         async with asyncio.timeout(timeout):
@@ -309,9 +336,10 @@ T = TypeVar("T")  # Original return type
 
 
 class Request:
-    def __init__(self, api: API) -> None:
+    def __init__(self, api: API, callback: Callable[[Request], None] | None) -> None:
         self.api = api
         self._calls: list[MethodCall] = []
+        self._callback = callback
 
     def add_call(self, call: MethodCall) -> None:
         self._calls.append(call)
@@ -327,7 +355,8 @@ class Request:
         exc_tb: TracebackType,
     ) -> None:
         self.api._requests.pop()
-        pass
+        if self._callback is not None:
+            self._callback(self)
 
     @property
     def body(self) -> JSONType | None:
@@ -360,9 +389,9 @@ class API:
             weakref.WeakValueDictionary()
         )
 
-    def request(self) -> Request:
+    def request(self, callback: Callable[[Request], None] | None = None) -> Request:
         """Create a Request context manager."""
-        request = Request(self)
+        request = Request(self, callback)
         return request
 
     def _process_method_response(self, response: JSONObject) -> None:
@@ -452,31 +481,32 @@ if __name__ == "__main__":
         return f"hello {name}"
 
     @server.method()
-    def add(a: int, b: int) -> int:
+    def add(server: Server, a: int, b: int) -> int:
+        print("SERVER", server)
         return a + b
 
-    print("!", add(1, 2))
+    # print("!", add(1, 2))
     print(server._methods)
 
-    print(
-        server.call(
-            [
-                {
-                    "jsonrpc": "2.0",
-                    "method": "hello",
-                    "params": {"name": "Will"},
-                    "id": "1",
-                },
-                {
-                    "jsonrpc": "2.0",
-                    "method": "add",
-                    "params": {"a": 10, "b": 20},
-                    "id": "2",
-                },
-                {"jsonrpc": "2.0", "method": "alert", "params": {"message": "Alert!"}},
-            ]
-        )
-    )
+    # print(
+    #     server.call(
+    #         [
+    #             {
+    #                 "jsonrpc": "2.0",
+    #                 "method": "hello",
+    #                 "params": {"name": "Will"},
+    #                 "id": "1",
+    #             },
+    #             {
+    #                 "jsonrpc": "2.0",
+    #                 "method": "add",
+    #                 "params": {"a": 10, "b": 20},
+    #                 "id": "2",
+    #             },
+    #             {"jsonrpc": "2.0", "method": "alert", "params": {"message": "Alert!"}},
+    #         ]
+    #     )
+    # )
 
     async def test_proxy():
         api = API()
