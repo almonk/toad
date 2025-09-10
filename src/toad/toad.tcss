@@ -100,11 +100,15 @@ Conversation {
         }
     }        
 
-    AgentResponse {            
+    AgentResponse {           
+        min-height: 1;        
         padding: 0 1 0 0;       
         overflow-x: auto;
         scrollbar-size-horizontal: 0;
-        layout: stream;
+        layout: vertical;
+        MarkdownBlock:last-child {
+            margin-bottom: 0;
+        }
     }
 
     ShellResult {        
@@ -152,9 +156,9 @@ Conversation {
 }
 
 SettingsScreen {
-    Markdown {
-        layout: stream;
-    }
+    # Markdown {
+    #     layout: stream;
+    # }
 
     overflow: hidden;
     background: $background 60%;
@@ -345,6 +349,15 @@ Prompt {
             height: 1;
             text-wrap: nowrap;
             color: $text-warning;        
+        }
+        AgentInfo {
+            padding: 0 1;
+            margin: 1 1;
+            color: $text-primary;
+            background: $primary 10%;
+            width: auto;
+
+           
         }
     }
 

@@ -5,11 +5,15 @@ from pathlib import Path
 
 from logging import getLogger
 
+from textual.content import Content
+from textual.message_pump import MessagePump
+
 from toad import jsonrpc
 from toad.agent import AgentBase
 from toad.acp import protocol
 from toad.acp import api
 from toad.acp.api import API
+from toad.acp import messages
 from toad.acp.prompt import build as build_prompt
 
 log = getLogger("acp")
@@ -28,7 +32,12 @@ class Agent(AgentBase):
             command: Command to launch agent.
         """
         super().__init__(project_root)
+
         self.command = command
+
+        self.server = jsonrpc.Server()
+        self.server.expose_instance(self)
+
         self._agent_task: asyncio.Task | None = None
         self._task: asyncio.Task | None = None
         self._process: asyncio.subprocess.Process | None = None
@@ -44,11 +53,15 @@ class Agent(AgentBase):
         }
         self.auth_methods: list[protocol.AuthMethod] = []
         self.session_id: str = ""
-        self.server = jsonrpc.Server()
-        self.server.expose_instance(self)
 
-    def start(self) -> None:
+        self._message_target: MessagePump | None = None
+
+    def get_info(self) -> Content:
+        return Content(self.command)
+
+    def start(self, message_target: MessagePump | None = None) -> None:
         """Start the agent."""
+        self._message_target = message_target
         self._agent_task = asyncio.create_task(self._run_agent())
 
     def send(self, request: jsonrpc.Request) -> None:
@@ -69,17 +82,26 @@ class Agent(AgentBase):
         """Create a request object."""
         return API.request(self.send)
 
-    @jsonrpc.expose()
-    def greet(self, name: str) -> str:
-        return f"Hello, {name}!"
-
     @jsonrpc.expose("update", prefix="session/")
     def rpc_session_update(self, sessionId: str, update: protocol.SessionUpdate):
         """Agent requests an update.
 
         https://agentclientprotocol.com/protocol/schema
         """
-        print(update)
+        message_target = self._message_target
+        if message_target is None:
+            return
+        match update:
+            case {
+                "sessionUpdate": "agent_message_chunk",
+                "content": {"type": type, "text": text},
+            }:
+                message_target.post_message(messages.ACPUpdate(type, text))
+            case {
+                "sessionUpdate": "agent_thought_chunk",
+                "content": {"type": type, "text": text},
+            }:
+                message_target.post_message(messages.ACPThinking())
 
     async def _run_agent(self) -> None:
         """Task to communicate with the agent subprocess."""
@@ -129,7 +151,6 @@ class Agent(AgentBase):
         await self.acp_initialize()
         # Create a new session
         await self.acp_new_session()
-        await self.send_prompt("Hello")
 
     async def send_prompt(self, prompt: str) -> None:
         """Send a prompt to the agent.

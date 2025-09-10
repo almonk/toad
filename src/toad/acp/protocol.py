@@ -127,17 +127,17 @@ type ContentBlock = (
 # https://agentclientprotocol.com/protocol/schema#param-user-message-chunk
 class UserMessageChunk(SchemaDict, total=False):
     content: Required[ContentBlock]
-    sessionUpdate: Required[str]
+    sessionUpdate: Required[Literal["user_message_chunk"]]
 
 
 class AgentMessageChunk(SchemaDict, total=False):
     content: Required[ContentBlock]
-    sessionUpdate: Required[str]
+    sessionUpdate: Required[Literal["agent_message_chunk"]]
 
 
 class AgentThoughtChunk(SchemaDict, total=False):
     content: Required[ContentBlock]
-    sessionUpdate: Required[str]
+    sessionUpdate: Required[Literal["agent_thought_chunk"]]
 
 
 class ToolCallContentContent(SchemaDict, total=False):
@@ -193,7 +193,7 @@ class ToolCall(SchemaDict, total=False):
     locations: list[ToolCallLocation]
     rawInput: dict
     rawOutput: dict
-    sessionUpdate: Required[str]
+    sessionUpdate: Required[Literal["tool_call"]]
     status: ToolCallStatus
     title: str
     toolCallId: Required[ToolCallId]
@@ -205,7 +205,7 @@ class ToolCallUpdate(SchemaDict, total=False):
     locations: list | None
     rawInput: dict
     rawOutput: dict
-    sessionUpdate: Required[str]
+    sessionUpdate: Required[Literal["tool_call_update"]]
     status: ToolCallStatus | None
     title: str | None
     toolCallId: ToolCallId
@@ -220,7 +220,7 @@ class PlanEntry(SchemaDict, total=False):
 # https://agentclientprotocol.com/protocol/schema#param-plan
 class Plan(SchemaDict, total=False):
     entries: Required[list[PlanEntry]]
-    sessionUpdate: str
+    sessionUpdate: Required[Literal["plan"]]
 
 
 class AvailableCommandInput(SchemaDict, total=False):
@@ -235,12 +235,12 @@ class AvailableCommand(SchemaDict, total=False):
 
 class AvailableCommandsUpdate(SchemaDict, total=False):
     availableCommands: Required[list[AvailableCommand]]
-    sessionUpdate: Required[str]
+    sessionUpdate: Required[Literal["available_commands_update"]]
 
 
 class CurrentModeUpdate(SchemaDict, total=False):
     currentModeId: Required[str]
-    sessionUpdate: Required[str]
+    sessionUpdate: Required[Literal["current_mode_update"]]
 
 
 type SessionUpdate = (

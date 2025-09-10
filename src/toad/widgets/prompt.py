@@ -42,6 +42,10 @@ class InvokeFileSearch(Message):
     pass
 
 
+class AgentInfo(Label):
+    pass
+
+
 class PromptTextArea(HighlightedTextArea):
     BINDING_GROUP_TITLE = "Prompt"
 
@@ -161,6 +165,7 @@ class Prompt(containers.VerticalGroup):
     multi_line = var(False)
     show_path_search = var(False, toggle_class="-show-path-search")
     project_path = var(Path("~/").expanduser().absolute())
+    agent_info = var(Content(""))
 
     @dataclass
     class AutoCompleteMove(Message):
@@ -182,6 +187,9 @@ class Prompt(containers.VerticalGroup):
     @property
     def text(self) -> str:
         return self.prompt_text_area.text
+
+    def watch_agent_info(self, agent_info: Content) -> None:
+        self.query_one(AgentInfo).update(agent_info)
 
     def watch_multiline(self) -> None:
         self.update_prompt()
@@ -424,6 +432,7 @@ class Prompt(containers.VerticalGroup):
                 Prompt.auto_completes, Prompt.multi_line, Prompt.shell_mode
             )
         with containers.HorizontalGroup(id="info-container"):
+            yield AgentInfo()
             yield CondensedPath()
 
     def action_dismiss(self) -> None:

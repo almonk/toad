@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
+from textual.content import Content
 
 
 class AgentBase(ABC):
@@ -11,3 +12,6 @@ class AgentBase(ABC):
 
     @abstractmethod
     async def send_prompt(self, prompt: str) -> None: ...
+
+    def get_info(self) -> Content:
+        return Content("")

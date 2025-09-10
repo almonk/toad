@@ -11,6 +11,7 @@ from textual import containers
 from textual import getters
 from textual import events
 from textual.binding import Binding
+from textual.content import Content
 from textual.widget import Widget
 from textual.widgets import Static
 from textual.widgets.markdown import MarkdownBlock, MarkdownFence
@@ -23,14 +24,15 @@ from textual.layout import WidgetPlacement
 import llm
 
 from toad import messages
+from toad.acp import messages as acp_messages
 from toad.app import ToadApp
+from toad.agent import AgentBase
 from toad.widgets.menu import Menu
 from toad.widgets.note import Note
 from toad.widgets.prompt import Prompt
 from toad.widgets.throbber import Throbber
 from toad.widgets.user_input import UserInput
 from toad.widgets.explain import Explain
-from toad.widgets.highlighted_textarea import HighlightedTextArea
 from toad.shell import Shell, CurrentWorkingDirectoryChanged
 from toad.slash_command import SlashCommand
 from toad.protocol import BlockProtocol, MenuProtocol
@@ -40,6 +42,7 @@ from toad.menus import CONVERSATION_MENUS, MenuItem
 
 if TYPE_CHECKING:
     from toad.widgets.ansi_log import ANSILog
+    from toad.widgets.agent_response import AgentResponse
 
 MD = """\
 # Textual Markdown Browser - Demo
@@ -424,6 +427,10 @@ class Conversation(containers.Vertical):
 
     shell: var[Shell] = var(Initialize(create_shell))
 
+    agent: var[AgentBase | None] = var(None)
+    agent_info: var[Content] = var(Content())
+    agent_response: var[AgentResponse | None] = var(None)
+
     def compose(self) -> ComposeResult:
         yield Throbber(id="throbber")
         with Window():
@@ -431,7 +438,9 @@ class Conversation(containers.Vertical):
                 with containers.VerticalGroup(id="cursor-container"):
                     yield Cursor()
                 yield Contents(id="contents")
-        yield Prompt().data_bind(project_path=Conversation.project_path)
+        yield Prompt().data_bind(
+            project_path=Conversation.project_path, agent_info=Conversation.agent_info
+        )
 
     @cached_property
     def conversation(self) -> llm.Conversation:
@@ -493,11 +502,16 @@ class Conversation(containers.Vertical):
                 await self.post(UserInput(text))
 
                 agent_response = AgentResponse(self.conversation)
-                await self.post(agent_response)
-                agent_response.send_prompt(
-                    event.body,
-                    Path(self.prompt.current_directory.path).expanduser().absolute(),
-                )
+                self.agent_response = agent_response
+                await self.post(agent_response, loading=True)
+
+                if self.agent is not None:
+                    await self.agent.send_prompt(text)
+
+                # agent_response.send_prompt(
+                #     event.body,
+                #     Path(self.prompt.current_directory.path).expanduser().absolute(),
+                # )
 
     @on(Menu.OptionSelected)
     async def on_menu_option_selected(self, event: Menu.OptionSelected) -> None:
@@ -540,6 +554,11 @@ class Conversation(containers.Vertical):
     def watch_busy_count(self, busy: int) -> None:
         self.throbber.set_class(busy > 0, "-busy")
 
+    @on(acp_messages.ACPUpdate)
+    async def on_acp_agent_message(self, message: acp_messages.ACPUpdate):
+        if self.agent_response is not None:
+            await self.agent_response.append_fragment(message.text)
+
     async def on_mount(self) -> None:
         self.prompt.focus()
         self.prompt.slash_commands = [
@@ -550,6 +569,11 @@ class Conversation(containers.Vertical):
         self.call_after_refresh(self.post_welcome)
         self.app.settings_changed_signal.subscribe(self, self._settings_changed)
         self.start_shell()
+
+        from toad.acp.agent import Agent
+
+        self.agent = Agent(self.project_path, "gemini --experimental-acp")
+        self.agent.start(self)
 
     @work
     async def start_shell(self) -> None:
@@ -569,18 +593,24 @@ class Conversation(containers.Vertical):
             Note(f"Settings read from [$text-success]'{self.app.settings_path}'"),
             anchor=True,
         )
-        notes_path = Path(__file__).parent / "../../../notes.md"
-        from toad.widgets.markdown_note import MarkdownNote
+        # notes_path = Path(__file__).parent / "../../../notes.md"
+        # from toad.widgets.markdown_note import MarkdownNote
 
-        await self.post(
-            MarkdownNote(notes_path.read_text(), name="read_text", classes="note")
-        )
+        # await self.post(
+        #     MarkdownNote(notes_path.read_text(), name="read_text", classes="note")
+        # )
 
         # from toad.widgets.agent_response import AgentResponse
 
         # agent_response = AgentResponse(self.conversation)
         # await self.post(agent_response)
         # agent_response.update(MD)
+
+    def watch_agent(self, agent: AgentBase | None) -> None:
+        if agent is None:
+            self.agent_info = Content("")
+        else:
+            self.agent_info = agent.get_info()
 
     def on_click(self, event: events.Click) -> None:
         widget = event.widget
@@ -615,10 +645,10 @@ class Conversation(containers.Vertical):
         # event.stop()
 
     async def post[WidgetType: Widget](
-        self, widget: WidgetType, anchor: bool = True
+        self, widget: WidgetType, *, anchor: bool = True, loading: bool = False
     ) -> WidgetType:
-        self._blocks = None
         await self.contents.mount(widget)
+        widget.loading = loading
         if anchor:
             self.window.anchor()
         return widget

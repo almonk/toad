@@ -3,6 +3,7 @@ from llm import Conversation
 
 from textual.reactive import var
 from textual import work
+from textual.content import Content
 from textual.widget import Widget
 from textual.widgets import Markdown
 from textual.widgets.markdown import MarkdownStream
@@ -23,6 +24,7 @@ class AgentResponse(Markdown):
     def __init__(self, conversation: Conversation, markdown: str | None = None) -> None:
         self.conversation = conversation
         super().__init__(markdown)
+        self._stream: MarkdownStream | None = None
 
     def block_cursor_clear(self) -> None:
         self.block_cursor_offset = -1
@@ -70,8 +72,15 @@ class AgentResponse(Markdown):
     def block_select(self, widget: Widget) -> None:
         self.block_cursor_offset = self.children.index(widget)
 
-    async def append_fragment(self, stream: MarkdownStream, fragment: str) -> None:
-        await stream.write(fragment)
+    @property
+    def stream(self) -> MarkdownStream:
+        if self._stream is None:
+            self._stream = self.get_stream(self)
+        return self._stream
+
+    async def append_fragment(self, fragment: str) -> None:
+        self.loading = False
+        await self.stream.write(fragment)
 
     @work
     async def send_prompt(self, prompt: str, project_path: Path) -> None:
