@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 import difflib
 
 from rich.segment import Segment
@@ -9,6 +10,7 @@ from textual.app import ComposeResult
 from textual.content import Content
 from textual.geometry import Size
 from textual import highlight
+from textual import events
 from textual.css.styles import RulesMap
 from textual._segment_tools import line_pad
 from textual.strip import Strip
@@ -227,6 +229,8 @@ class DiffView(containers.VerticalGroup):
     path2: reactive[str] = reactive("")
     language: reactive[str | None] = reactive(None)
     split: reactive[bool] = reactive(True, recompose=True)
+    annotations: var[bool] = var(False, toggle_class="-with-annotations")
+    auto_split: var[bool] = var(True)
 
     DEFAULT_CSS = """
     DiffView {
@@ -241,6 +245,11 @@ class DiffView(containers.VerticalGroup):
         .diff-group {
             height: auto;
             background: $foreground 4%;
+        }
+
+        .annotations { width: 1; }
+        &.-with-annotations {
+            .annotations { width: auto; }
         }
     }
     """
@@ -306,6 +315,26 @@ class DiffView(containers.VerticalGroup):
             yield from self.compose_split()
         else:
             yield from self.compose_unified()
+
+    async def on_resize(self, event: events.Resize) -> None:
+        if self.auto_split:
+            lines_a, lines_b = self.highlighted_code_lines
+            split_width = max([line.cell_length for line in (lines_a + lines_b)]) * 2
+            split_width += (
+                max(
+                    [
+                        len(str(len(lines_a))),
+                        len(str(len(lines_b))),
+                    ]
+                )
+                + 4
+            ) * 2
+            if self.annotations:
+                split_width += 3 * 2
+            else:
+                split_width += 2
+
+            self.split = event.size.width >= split_width
 
     def compose_unified(self) -> ComposeResult:
         lines_a, lines_b = self.highlighted_code_lines
@@ -383,7 +412,8 @@ class DiffView(containers.VerticalGroup):
                         .stylize(LINE_STYLES[annotation])
                         .stylize("bold")
                         for annotation in annotations
-                    ]
+                    ],
+                    classes="annotations",
                 )
                 code_line_styles = [
                     LINE_STYLES[annotation] for annotation in annotations
@@ -474,7 +504,8 @@ class DiffView(containers.VerticalGroup):
                             )
                         )
                         for annotation in annotations_a
-                    ]
+                    ],
+                    classes="annotations",
                 )
 
                 code_line_styles = [
@@ -517,7 +548,8 @@ class DiffView(containers.VerticalGroup):
                             )
                         )
                         for annotation in annotations_b
-                    ]
+                    ],
+                    classes="annotations",
                 )
 
                 code_line_styles = [
@@ -606,15 +638,25 @@ def loop_first_last(values: Iterable[ValueType]) -> Iterable[tuple[bool, bool, V
 
 '''
     from textual.app import App
+    from textual.widgets import Footer
 
     class DiffApp(App):
-        BINDINGS = [("space", "split", "Toggle split")]
+        BINDINGS = [
+            ("space", "split", "Toggle split"),
+            ("a", "toggle_annotations", "Toggle annotations"),
+        ]
 
         def compose(self) -> ComposeResult:
             yield DiffView("foo.py", "foo.py", SOURCE1, SOURCE2)
+            yield Footer()
 
         def action_split(self) -> None:
             self.query_one(DiffView).split = not self.query_one(DiffView).split
+
+        def action_toggle_annotations(self) -> None:
+            self.query_one(DiffView).annotations = not self.query_one(
+                DiffView
+            ).annotations
 
     app = DiffApp()
     app.run()
