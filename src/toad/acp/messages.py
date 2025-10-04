@@ -5,6 +5,7 @@ from textual.message import Message
 
 from toad.answer import Answer
 from toad.acp import protocol
+from toad.acp.encode_tool_call_id import encode_tool_call_id
 
 
 class AgentMessage(Message):
@@ -37,8 +38,7 @@ class ToolCall(AgentMessage):
     @property
     def tool_id(self) -> str:
         """An id suitable for use as a TCSS ID."""
-        tool_call_id = self.tool_call["toolCallId"]
-        return f"toolcall-{tool_call_id}"
+        return encode_tool_call_id(self.tool_call["toolCallId"])
 
 
 @dataclass
@@ -49,5 +49,4 @@ class ToolCallUpdate(AgentMessage):
     @property
     def tool_id(self) -> str:
         """An id suitable for use as a TCSS ID."""
-        tool_call_id = self.tool_call["toolCallId"]
-        return f"toolcall-{tool_call_id}"
+        return encode_tool_call_id(self.tool_call["toolCallId"])

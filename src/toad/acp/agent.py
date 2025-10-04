@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import json
 import os
 from pathlib import Path
@@ -11,6 +12,7 @@ from textual.message_pump import MessagePump
 from textual import log
 
 from toad import jsonrpc
+from toad.acp.encode_tool_call_id import encode_tool_call_id
 from toad.agent import AgentBase
 from toad.acp import protocol
 from toad.acp import api
@@ -118,63 +120,39 @@ class Agent(AgentBase):
                 "sessionUpdate": "tool_call",
                 "toolCallId": tool_call_id,
             }:
-                self.tool_calls[tool_call_id] = update
+                encoded_tool_call_id = encode_tool_call_id(tool_call_id)
+                self.tool_calls[encoded_tool_call_id] = update
                 message_target.post_message(messages.ToolCall(update))
 
             case {
                 "sessionUpdate": "tool_call_update",
                 "toolCallId": tool_call_id,
             }:
-                if tool_call_id in self.tool_calls:
-                    current_tool_call = self.tool_calls[tool_call_id]
+                encoded_tool_call_id = encode_tool_call_id(tool_call_id)
+                if encoded_tool_call_id in self.tool_calls:
+                    current_tool_call = self.tool_calls[encoded_tool_call_id]
                     for key, value in update.items():
                         if value is not None:
                             current_tool_call[key] = value
 
                     message_target.post_message(
-                        messages.ToolCallUpdate(current_tool_call, update)
+                        messages.ToolCallUpdate(
+                            copy.deepcopy(current_tool_call), update
+                        )
                     )
                 else:
-                    log.warning(f"Unknown tool call id in update; {update}")
-
-    '''
-    {
-        'jsonrpc': '2.0',
-        'id': 1,
-        'method': 'session/request_permission',
-        'params': {
-            'sessionId': '6506cc77-3c25-4b39-8a01-0aea0045d046',
-            'options': [
-                {'optionId': 'proceed_always', 'name': 'Allow All Edits', 'kind': 'allow_always'},
-                {'optionId': 'proceed_once', 'name': 'Allow', 'kind': 'allow_once'},
-                {'optionId': 'cancel', 'name': 'Reject', 'kind': 'reject_once'}
-            ],
-            'toolCall': {
-                'toolCallId': 'write_file-1759479269516',
-                'status': 'pending',
-                'title': 'Writing to mandelbrot.py',
-                'content': [
-                    {
-                        'type': 'diff',
-                        'path': 'mandelbrot.py',
-                        'oldText': '',
-                        'newText': 'import os\n\n\ndef get_terminal_size():\n    """Get the size of the terminal."""\n    try:\n
-    return os.get_terminal_size()\n    except OSError:\n        return 80, 24\n\n\ndef mandelbrot(c, max_iter):\n
-    """Determine if a point is in the Mandelbrot set."""\n    z = 0\n    n = 0\n    while abs(z) <= 2 and n < max_iter:\n
-    z = z * z + c\n        n += 1\n    return n\n\n\ndef draw_mandelbrot():\n    """Draw the Mandelbrot set in the
-    terminal."""\n    width, height = get_terminal_size()\n    x_min, x_max = -2.0, 1.0\n    y_min, y_max = -1.0, 1.0\n
-    max_iter = 256\n\n    chars = " .,-%*#@ "\n\n    for py in range(height):\n        line = ""\n        for px in
-    range(width):\n            x = x_min + (x_max - x_min) * px / width\n            y = y_min + (y_max - y_min) * py / height\n
-    c = complex(x, y)\n            m = mandelbrot(c, max_iter)\n            char_index = (m * (len(chars) - 1)) // max_iter\n
-    line += chars[char_index]\n        print(line)\n\n\nif __name__ == "__main__":\n    draw_mandelbrot()\n'
+                    # The agent can send a tool call update, without previously sending the tool call *rolls eyes*
+                    current_tool_call: protocol.ToolCall = {
+                        "sessionUpdate": "tool_call",
+                        "toolCallId": tool_call_id,
+                        "title": "Tool call",
                     }
-                ],
-                'locations': [{'path': '/Users/willmcgugan/sandbox/mandelbrot.py'}],
-                'kind': 'edit'
-            }
-        }
-    }
-    '''
+                    for key, value in update.items():
+                        if value is not None:
+                            current_tool_call[key] = value
+
+                    self.tool_calls[encoded_tool_call_id] = current_tool_call
+                    message_target.post_message(messages.ToolCall(current_tool_call))
 
     @jsonrpc.expose("session/request_permission")
     async def rpc_request_permission(
@@ -195,20 +173,16 @@ class Agent(AgentBase):
         Returns:
             The response to the permission request.
         """
-        print("REQUEST PERMISSION")
         assert self._message_target is not None
         result_future: asyncio.Future[Answer] = asyncio.Future()
-        kind = toolCall.get("kind", None)
+        # kind = toolCall.get("kind", None)
         tool_call_id = toolCall.get("toolCallId", None)
-        print(f"{kind=} {tool_call_id=}")
-
-        if tool_call_id not in self.tool_calls:
+        encoded_tool_call_id = encode_tool_call_id(tool_call_id)
+        if encoded_tool_call_id not in self.tool_calls:
             permission_tool_call = toolCall
             permission_tool_call.pop("sessionUpdate", None)
             tool_call = cast(protocol.ToolCall, permission_tool_call)
-            self.tool_calls[tool_call_id] = tool_call
-
-        log(self.tool_calls)
+            self.tool_calls[encoded_tool_call_id] = tool_call
 
         # if kind is None and tool_call_id in self.tool_calls:
         #     permission_tool_call = self.tool_calls[tool_call_id]
@@ -220,7 +194,6 @@ class Agent(AgentBase):
         #         permission_tool_call,
         #     )
 
-        print("Post RequestPermission")
         self._message_target.post_message(
             messages.RequestPermission(options, toolCall, result_future)
         )

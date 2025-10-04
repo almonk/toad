@@ -2,8 +2,7 @@ from textual import log
 from textual.app import ComposeResult
 from textual.content import Content
 from textual import containers
-from textual.widgets import Static, Markdown
-from textual.reactive import var, Initialize
+from textual.widgets import Static
 
 from toad.acp import protocol
 from toad.pill import pill
@@ -16,10 +15,6 @@ class TextContent(Static):
         height: auto;
     }
     """
-
-
-class ToolCall(Static):
-    DEFAULT_CLASSES = "block"
 
 
 class ToolCallItem(containers.HorizontalGroup):
@@ -38,17 +33,15 @@ class ToolCallDiff(Static):
 class ToolCallHeader(Static):
     DEFAULT_CSS = """
     ToolCallHeader {
-        width: 1fr;
-        text-wrap: nowrap;
-        text-overflow: ellipsis;        
+        width: 1fr;        
     }
     """
 
 
-class ToolCallContent(containers.VerticalGroup):
+class ToolCall(containers.VerticalGroup):
     DEFAULT_CLASSES = "block"
     DEFAULT_CSS = """
-    ToolCallContent {
+    ToolCall {
         padding: 0 1;
         # background: $foreground 5%;
         # border-top: panel black 10%;
@@ -84,20 +77,31 @@ class ToolCallContent(containers.VerticalGroup):
     def tool_call(self) -> protocol.ToolCall:
         return self._tool_call
 
-    def compose(self) -> ComposeResult:
-        content: list[protocol.ToolCallContent] = (
-            self.tool_call.get("content", None) or []
-        )
-        kind = self._tool_call.get("kind", "tool")
-        title = self._tool_call.get("title", "title")
+    @tool_call.setter
+    def tool_call(self, tool_call: protocol.ToolCall):
+        self._tool_call = tool_call
+        self.refresh(recompose=True)
 
+    def compose(self) -> ComposeResult:
+        tool_call = self._tool_call
+        content: list[protocol.ToolCallContent] = tool_call.get("content", None) or []
+        kind = tool_call.get("kind", "tool")
+        title = tool_call.get("title", "title")
+        status = tool_call.get("status", "pending")
         header = Content.assemble(
             "🔧 ",
-            (kind, "bold dim"),
+            pill(kind, "$primary-muted", "$text-primary"),
             " ",
             (title, "$text-success"),
         )
-        # self.border_title = header
+        if status == "pending":
+            header += Content.assemble(" ⏲")
+        elif status == "in_progress":
+            pass
+        elif status == "failed":
+            header += Content.assemble(" ", pill("failed", "$error-muted", "$error"))
+        elif status == "completed":
+            header += Content.from_markup(" [$success]✔")
 
         yield ToolCallHeader(header).with_tooltip(title)
         with containers.VerticalGroup(id="tool-content"):
@@ -164,7 +168,7 @@ if __name__ == "__main__":
             self.theme = "dracula"
 
         def compose(self) -> ComposeResult:
-            yield ToolCallContent(TOOL_CALL_READ)
-            yield ToolCallContent(TOOL_CALL_CONTENT)
+            yield ToolCall(TOOL_CALL_READ)
+            yield ToolCall(TOOL_CALL_CONTENT)
 
     ToolApp().run()

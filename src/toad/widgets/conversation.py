@@ -14,6 +14,7 @@ from textual import getters
 from textual import events
 from textual.binding import Binding
 from textual.content import Content
+from textual.css.query import NoMatches
 from textual.widget import Widget
 from textual.widgets import Static
 from textual.widgets.markdown import MarkdownBlock, MarkdownFence
@@ -622,33 +623,29 @@ class Conversation(containers.Vertical):
     async def on_acp_tool_call_update(
         self, message: acp_messages.ToolCall | acp_messages.ToolCallUpdate
     ):
-        new_tool_call = isinstance(message, acp_messages.ToolCallUpdate)
+        self.log("TOOL CALL")
+        self.log(message)
+        from toad.widgets.tool_call import ToolCall
+
         tool_call = message.tool_call
 
         if tool_call.get("status", None) in (None, "completed"):
             self._agent_thought = None
             self._agent_response = None
 
-        if not new_tool_call:
-            return
-
-        # content = tool_call.get("content", None) or []
-
-        from toad.widgets.tool_call import ToolCallContent
-
-        self.log("TOOL CALL")
-        self.log(tool_call)
-        await self.post(ToolCallContent(tool_call, id=message.tool_id))
-
-        # for content in content:
-        #     match content:
-        #         case {
-        #             "type": content,
-        #             "content": {"type": "text", "text": text},
-        #         }:
-        #             await self.post(ToolCallContent())
-
-        #             await self.post(ToolCall(text, markup=False, id=message.tool_id))
+        tool_id = message.tool_id
+        print("TOOL_ID", tool_id)
+        try:
+            existing_tool_call: ToolCall | None = self.contents.get_child_by_id(
+                tool_id, ToolCall
+            )
+            print("EXISTING TOOL", existing_tool_call)
+        except NoMatches:
+            print("NEW TOOL")
+            await self.post(ToolCall(tool_call, id=message.tool_id))
+        else:
+            print("UPDATE TOOL")
+            existing_tool_call.tool_call = tool_call
 
     @work
     async def request_permissions(

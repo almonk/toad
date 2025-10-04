@@ -185,6 +185,12 @@ Conversation {
         }
     }
 
+    ToolCall {
+        background: $foreground 8%;
+        margin: 1 1 1 0;              
+        padding: 1 1 1 1;
+    }
+
     ShellResult {        
         border-left: blank $primary;
         background: $foreground 4%;        
