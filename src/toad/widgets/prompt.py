@@ -264,6 +264,7 @@ class Prompt(containers.VerticalGroup):
             "rmdir",
             "mkdir",
             "touch",
+            "open",
         ):
             return True
         return False

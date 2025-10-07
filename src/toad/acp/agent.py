@@ -1,9 +1,10 @@
 import asyncio
-import copy
+
 import json
 import os
 from pathlib import Path
 from typing import cast
+from copy import deepcopy
 
 import rich.repr
 
@@ -12,7 +13,6 @@ from textual.message_pump import MessagePump
 from textual import log
 
 from toad import jsonrpc
-from toad.acp.encode_tool_call_id import encode_tool_call_id
 from toad.agent import AgentBase
 from toad.acp import protocol
 from toad.acp import api
@@ -120,25 +120,21 @@ class Agent(AgentBase):
                 "sessionUpdate": "tool_call",
                 "toolCallId": tool_call_id,
             }:
-                encoded_tool_call_id = encode_tool_call_id(tool_call_id)
-                self.tool_calls[encoded_tool_call_id] = update
+                self.tool_calls[tool_call_id] = update
                 message_target.post_message(messages.ToolCall(update))
 
             case {
                 "sessionUpdate": "tool_call_update",
                 "toolCallId": tool_call_id,
             }:
-                encoded_tool_call_id = encode_tool_call_id(tool_call_id)
-                if encoded_tool_call_id in self.tool_calls:
-                    current_tool_call = self.tool_calls[encoded_tool_call_id]
+                if tool_call_id in self.tool_calls:
+                    current_tool_call = self.tool_calls[tool_call_id]
                     for key, value in update.items():
                         if value is not None:
                             current_tool_call[key] = value
 
                     message_target.post_message(
-                        messages.ToolCallUpdate(
-                            copy.deepcopy(current_tool_call), update
-                        )
+                        messages.ToolCallUpdate(deepcopy(current_tool_call), update)
                     )
                 else:
                     # The agent can send a tool call update, without previously sending the tool call *rolls eyes*
@@ -151,7 +147,7 @@ class Agent(AgentBase):
                         if value is not None:
                             current_tool_call[key] = value
 
-                    self.tool_calls[encoded_tool_call_id] = current_tool_call
+                    self.tool_calls[tool_call_id] = current_tool_call
                     message_target.post_message(messages.ToolCall(current_tool_call))
 
     @jsonrpc.expose("session/request_permission")
@@ -176,27 +172,17 @@ class Agent(AgentBase):
         assert self._message_target is not None
         result_future: asyncio.Future[Answer] = asyncio.Future()
         # kind = toolCall.get("kind", None)
-        tool_call_id = toolCall.get("toolCallId", None)
-        encoded_tool_call_id = encode_tool_call_id(tool_call_id)
-        if encoded_tool_call_id not in self.tool_calls:
-            permission_tool_call = toolCall
+        tool_call_id = toolCall["toolCallId"]
+        if tool_call_id not in self.tool_calls:
+            permission_tool_call = toolCall.copy()
             permission_tool_call.pop("sessionUpdate", None)
             tool_call = cast(protocol.ToolCall, permission_tool_call)
-            self.tool_calls[encoded_tool_call_id] = tool_call
+            self.tool_calls[tool_call_id] = deepcopy(tool_call)
+        else:
+            tool_call = deepcopy(self.tool_calls[tool_call_id])
 
-        # if kind is None and tool_call_id in self.tool_calls:
-        #     permission_tool_call = self.tool_calls[tool_call_id]
-        #     self.tool_calls[tool_call_id] = permission_tool_call
-
-        #     permission_tool_call.pop("sessionUpdate")
-        #     toolCall = cast(
-        #         protocol.ToolCallUpdatePermissionRequest,
-        #         permission_tool_call,
-        #     )
-
-        self._message_target.post_message(
-            messages.RequestPermission(options, toolCall, result_future)
-        )
+        message = messages.RequestPermission(options, tool_call, result_future)
+        self._message_target.post_message(message)
         await result_future
         ask_result = result_future.result()
 
@@ -237,7 +223,7 @@ class Agent(AgentBase):
     def rpc_write_text_file(self, sessionId: str, path: str, content: str) -> None:
         # TODO: What if the agent wants to write outside of the project path?
         # https://agentclientprotocol.com/protocol/file-system#writing-files
-        print("WRITE TEXT FILE", path)
+
         write_path = self.project_root_path / path
         write_path.write_text(content, encoding="utf-8", errors="ignore")
 
@@ -282,7 +268,6 @@ class Agent(AgentBase):
             # This line should contain JSON, which may be:
             #   A) a JSONRPC request
             #   B) a JSONRPC response to a previous request
-            print("LINE", line)
             if not line.strip():
                 continue
 
@@ -313,9 +298,7 @@ class Agent(AgentBase):
                     continue
 
             # By this point we know it is a JSON RPC call
-            print("JSONRPC CALL")
             assert isinstance(agent_data, dict)
-            log(agent_data)
             tasks.add(asyncio.create_task(call_jsonrpc(agent_data)))
 
         print("AGENT RETURN", process.returncode)

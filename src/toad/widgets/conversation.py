@@ -7,7 +7,7 @@ from pathlib import Path
 
 from typing import Callable, Any
 
-from textual import on, work
+from textual import log, on, work
 from textual.app import ComposeResult
 from textual import containers
 from textual import getters
@@ -557,6 +557,7 @@ class Conversation(containers.Vertical):
         Args:
             stop_reason: The stop reason returned from the Agent, or `None`.
         """
+        print("AGENT THOUGHT OVER")
         if self._agent_thought is not None and self._agent_thought.loading:
             await self._agent_thought.remove()
 
@@ -604,7 +605,6 @@ class Conversation(containers.Vertical):
     @on(acp_messages.RequestPermission)
     async def on_acp_request_permission(self, message: acp_messages.RequestPermission):
         message.stop()
-        self.log(message)
         options = [
             Answer(
                 option["name"],
@@ -623,8 +623,6 @@ class Conversation(containers.Vertical):
     async def on_acp_tool_call_update(
         self, message: acp_messages.ToolCall | acp_messages.ToolCallUpdate
     ):
-        self.log("TOOL CALL")
-        self.log(message)
         from toad.widgets.tool_call import ToolCall
 
         tool_call = message.tool_call
@@ -634,17 +632,13 @@ class Conversation(containers.Vertical):
             self._agent_response = None
 
         tool_id = message.tool_id
-        print("TOOL_ID", tool_id)
         try:
             existing_tool_call: ToolCall | None = self.contents.get_child_by_id(
                 tool_id, ToolCall
             )
-            print("EXISTING TOOL", existing_tool_call)
         except NoMatches:
-            print("NEW TOOL")
             await self.post(ToolCall(tool_call, id=message.tool_id))
         else:
-            print("UPDATE TOOL")
             existing_tool_call.tool_call = tool_call
 
     @work
@@ -655,6 +649,9 @@ class Conversation(containers.Vertical):
         tool_call_update: acp_protocol.ToolCallUpdatePermissionRequest,
     ) -> None:
         kind = tool_call_update.get("kind")
+
+        log(tool_call_update)
+
         if kind is None:
             from toad.widgets.tool_call import ToolCall
 

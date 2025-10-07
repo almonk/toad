@@ -2,7 +2,7 @@ from textual import log
 from textual.app import ComposeResult
 from textual.content import Content
 from textual import containers
-from textual.widgets import Static
+from textual.widgets import Static, Markdown
 
 from toad.acp import protocol
 from toad.pill import pill
@@ -15,6 +15,10 @@ class TextContent(Static):
         height: auto;
     }
     """
+
+
+class MarkdownContent(Markdown):
+    pass
 
 
 class ToolCallItem(containers.HorizontalGroup):
@@ -115,7 +119,7 @@ class ToolCall(containers.VerticalGroup):
         ) -> ComposeResult:
             match content_block:
                 case {"type": "text", "text": text}:
-                    yield TextContent(text, markup=False)
+                    yield TextContent(text)
 
         for content in tool_call_content:
             log(content)

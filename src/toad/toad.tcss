@@ -36,6 +36,11 @@ Note,MarkdownNote {
     }
 }
 
+Menu {
+    border: round $accent;
+    background: transparent;
+}
+
 # Plan {
 #         background: black 20%;
 #         height: auto;
@@ -166,7 +171,6 @@ Conversation {
         MarkdownBlock:last-child {
             margin-bottom: 0;
         }
-
        
         &.-loading {            
             background: transparent !important;
@@ -176,23 +180,22 @@ Conversation {
         max-height: 10;
         overflow-y: auto;
         scrollbar-visibility: hidden;
-        # scrollbar-size: 0 0;
 
         &.-maximized {
             max-height: 100h;
             margin: 1 2;
             scrollbar-visibility: visible;
-            &>* {
-                
+            &>* {                
                 padding-right: 1;
             }
         }
     }
 
-    ToolCall {
-        background: black 10%;
-        margin: 1 1 1 0;              
-        padding: 1 1 1 1;
+    ToolCall {                
+        border: tall black 20%;
+        background: black 12%;            
+        margin: 1 0 1 0 !important;   # Special case because the tall border reduces the apparent width           
+        padding: 0 0 0 1;
     }
 
     ShellResult {        
@@ -358,7 +361,6 @@ Prompt {
             width: auto;           
         }
     }
-
 
 }
 

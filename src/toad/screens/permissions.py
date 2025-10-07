@@ -1,5 +1,6 @@
 import asyncio
 
+import os
 from typing import Awaitable, Callable
 from textual import on
 from textual.app import ComposeResult
@@ -217,7 +218,8 @@ class PermissionsScreen(Screen[Answer]):
             diff_view.split = diff_view_setting == "split"
             diff_view.auto_split = diff_view_setting == "auto"
         await self.tool_container.mount(diff_view)
-        option_text = f"📄 {path1}"
+
+        option_text = f"📄 {os.path.basename(path1)}"
         self.navigator.add_option(Option(option_text, option_id))
 
     @on(OptionList.OptionHighlighted)

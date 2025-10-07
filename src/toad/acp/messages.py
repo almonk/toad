@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from asyncio import Future
 from textual.message import Message
 
+import rich.repr
+
 from toad.answer import Answer
 from toad.acp import protocol
 from toad.acp.encode_tool_call_id import encode_tool_call_id
@@ -25,6 +27,7 @@ class Update(AgentMessage):
 
 
 @dataclass
+@rich.repr.auto
 class RequestPermission(AgentMessage):
     options: list[protocol.PermissionOption]
     tool_call: protocol.ToolCallUpdatePermissionRequest
