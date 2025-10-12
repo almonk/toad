@@ -211,6 +211,7 @@ class ANSILog(ScrollView, can_focus=False):
                 absolute_y,
                 content,
                 replace,
+                clear,
             ) = ansi_token
             while self.cursor_line >= len(folded_lines):
                 self.add_line(Content())
