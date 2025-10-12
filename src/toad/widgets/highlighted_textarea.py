@@ -17,7 +17,7 @@ from pygments.token import Token
 
 
 RE_MATCH_FILE_PROMPT = re.compile(r"(@\S+)|@\"(.*)\"")
-RE_SLASH_COMMAND = re.compile(r"(\/\S*)\W(.*)$")
+RE_SLASH_COMMAND = re.compile(r"(\/\S*)(\W.*)?$")
 
 
 class TextualHighlightTheme(HighlightTheme):
@@ -116,7 +116,7 @@ class HighlightedTextArea(TextArea):
                 command, _operand = match.groups()
                 content = Content(text)
                 content = content.stylize("$text-success", 0, len(command))
-                content = content.stylize("$text-primary italic", len(command) + 1)
+                content = content.stylize("dim", len(command) + 1)
                 self._highlight_lines = [content]
                 return self._highlight_lines
 

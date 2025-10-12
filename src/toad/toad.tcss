@@ -360,10 +360,12 @@ Prompt {
 
 AutoCompleteOptions {    
     max-height: 50vh;
-    max-width: 90vw;
+    
     border: none;
     padding: 0;
     width: auto;
+    max-width: 100;
+    
     overlay: screen;
     overflow: hidden;
     constrain: inside inflect;    

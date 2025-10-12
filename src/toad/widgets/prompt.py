@@ -436,14 +436,22 @@ class Prompt(containers.VerticalGroup):
             + 1
         )
 
+        from toad.visuals.columns import Columns
+
+        columns = Columns("auto", "flex")
+
         if not self.is_shell_mode:
             for slash_command in self.slash_commands:
                 if str(slash_command).startswith(pre_cursor) and pre_cursor != str(
                     slash_command
                 ):
+                    row = columns.add_row(
+                        Content.styled(slash_command.command, "$text-success"),
+                        Content.styled(slash_command.help, "dim"),
+                    )
                     suggestions.append(
                         Option(
-                            slash_command.content.expand_tabs(command_length),
+                            row,
                             id=slash_command.command,
                         )
                     )

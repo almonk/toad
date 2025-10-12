@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from itertools import accumulate
-import operator
 from typing import Literal
 from fractions import Fraction
 
+import rich.repr
 from rich.segment import Segment
 
 from textual.content import Content
@@ -16,10 +15,27 @@ from textual.style import Style
 from toad._loop import loop_last
 
 
+@rich.repr.auto
 class Row(Visual):
+    """A visual for a row produced by `columns`.
+
+    No need to construct these manually, they are returned from the Columns `__getindex__`
+
+    """
+
     def __init__(self, columns: Columns, row_index: int) -> None:
+        """
+
+        Args:
+            columns: The parent Columns instance.
+            row_index: Index of the row within columns.
+        """
         self.columns = columns
         self.row_index = row_index
+
+    def __rich_repr__(self) -> rich.repr.Result:
+        yield self.columns
+        yield self.row_index
 
     def render_strips(
         self, width: int, height: int | None, style: Style, options: RenderOptions
@@ -28,12 +44,13 @@ class Row(Visual):
         return strips
 
     def get_optimal_width(self, rules: RulesMap, container_width: int) -> int:
-        return self.columns.get_optimal_width()
+        return min(container_width, self.columns.get_optimal_width())
 
     def get_height(self, rules: RulesMap, width: int) -> int:
         return self.columns.get_row_height(width, self.row_index)
 
 
+@rich.repr.auto
 class Columns:
     """Renders columns of Content."""
 
@@ -48,8 +65,14 @@ class Columns:
         self.style = style
         self.rows: list[list[Content]] = []
         self._last_render_parameters: tuple[int, Style] = (-1, Style())
-        self._last_render: list[list[Strip]] = []
+        self._last_render: list[list[Strip]] | None = None
         self._optimal_width_cache: int | None = None
+
+    def __rich_repr__(self) -> rich.repr.Result:
+        for column in self.columns:
+            yield column
+        yield "gutter", self.gutter, 1
+        yield "style", self.style, ""
 
     def __getitem__(self, row_index: int) -> Row:
         if row_index < 0:
@@ -61,7 +84,7 @@ class Columns:
     def get_optimal_width(self) -> int:
         if self._optimal_width_cache is not None:
             return self._optimal_width_cache
-        gutter_width = (len(self.rows) - 1) * self.gutter
+        gutter_width = (len(self.columns) - 1) * self.gutter
         optimal_width = max(
             sum(content.cell_length for content in row) + gutter_width
             for row in self.rows
@@ -70,25 +93,46 @@ class Columns:
         return optimal_width
 
     def get_row_height(self, width: int, row_index: int) -> int:
-        if not self._last_render:
+        if self._last_render is None:
             row_strips = self._render(width, Style.null())
         else:
             row_strips = self._last_render
         return len(row_strips[row_index])
 
-    def add_row(self, *cells: Content | str) -> None:
+    def add_row(self, *cells: Content | str) -> Row:
+        """Add a row.
+
+        Args:
+            *cells: Cell content.
+
+        Returns:
+            A Row renderable.
+
+        """
         assert len(cells) == len(self.columns)
         new_cells = [
             cell if isinstance(cell, Content) else Content(cell) for cell in cells
         ]
         self.rows.append(new_cells)
         self._optimal_width_cache = None
+        self._last_render = None
+        return Row(self, len(self.rows) - 1)
 
     def render(
         self, row_index: int, render_width: int, style: Style = Style.null()
     ) -> list[Strip]:
+        """render a row given by its index.
+
+        Args:
+            row_index: Index of the row.
+            render_width: Width of the render.
+            style: Base style to render.
+
+        Returns:
+            A list of strips, which may be returned from a visual.
+        """
         cache_key = (render_width, style)
-        if self._last_render_parameters == cache_key:
+        if self._last_render_parameters == cache_key and self._last_render is not None:
             row_strips = self._last_render
         else:
             row_strips = self._last_render = self._render(render_width, style)
@@ -96,6 +140,15 @@ class Columns:
         return row_strips[row_index]
 
     def _render(self, render_width: int, style: Style) -> list[list[Strip]]:
+        """Render a row.
+
+        Args:
+            render_width: Width of render.
+            style: Base Style.
+
+        Returns:
+            A list of list of Strips (one list of strips per row).
+        """
         gutter_width = (len(self.columns) - 1) * self.gutter
         widths: list[int | None] = []
 
@@ -174,7 +227,14 @@ if __name__ == "__main__":
     columns.add_row("Foo", "Hello, World! " * 20)
 
     class CApp(App):
+        DEFAULT_CSS = """
+        .row1 {
+            background: blue;
+           
+        }
+        """
+
         def compose(self) -> ComposeResult:
-            yield Static(columns[0])
+            yield Static(columns[0], classes="row1")
 
     CApp().run()
