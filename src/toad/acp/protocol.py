@@ -254,7 +254,7 @@ class SessionMode(SchemaDict, total=False):
 class SessionModeState(SchemaDict, total=False):
     _meta: dict
     availableModes: Required[list[SessionMode]]
-    currentModeId: SessionModeId
+    currentModeId: Required[SessionModeId]
 
 
 type ModelId = str

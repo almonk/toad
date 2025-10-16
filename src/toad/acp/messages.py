@@ -11,6 +11,7 @@ import rich.repr
 from toad.answer import Answer
 from toad.acp import protocol
 from toad.acp.encode_tool_call_id import encode_tool_call_id
+from toad.acp.agent import Mode
 
 if TYPE_CHECKING:
     from toad.widgets.terminal import TerminalState
@@ -114,3 +115,12 @@ class WaitForTerminalExit(AgentMessage):
 
     terminal_id: str
     result_future: Future[tuple[int, str | None]]
+
+
+@rich.repr.auto
+@dataclass
+class SetModes(AgentMessage):
+    """Set modes from agent."""
+
+    current_mode: str
+    modes: dict[str, Mode]

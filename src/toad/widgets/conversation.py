@@ -31,6 +31,7 @@ from toad import jsonrpc, messages
 from toad.acp import messages as acp_messages
 from toad.app import ToadApp
 from toad.acp import protocol as acp_protocol
+from toad.acp.agent import Mode
 from toad.answer import Answer
 from toad.agent import AgentBase, AgentReady
 from toad.widgets.menu import Menu
@@ -160,6 +161,8 @@ class Conversation(containers.Vertical):
     agent_ready: var[bool] = var(False)
     _agent_response: var[AgentResponse | None] = var(None)
     _agent_thought: var[AgentThought | None] = var(None)
+    modes: var[dict[str, Mode]] = var({})
+    current_mode: var[Mode | None] = var(None)
 
     def __init__(self, project_path: Path) -> None:
         super().__init__()
@@ -179,6 +182,7 @@ class Conversation(containers.Vertical):
             project_path=Conversation.project_path,
             agent_info=Conversation.agent_info,
             agent_ready=Conversation.agent_ready,
+            current_mode=Conversation.current_mode,
         )
 
     @cached_property
@@ -501,6 +505,11 @@ class Conversation(containers.Vertical):
         else:
             return_code, signal = await terminal.wait_for_exit()
             message.result_future.set_result((return_code or 0, signal))
+
+    @on(acp_messages.SetModes)
+    async def on_acp_set_modes(self, message: acp_messages.SetModes):
+        self.modes = message.modes
+        self.current_mode = self.modes[message.current_mode]
 
     @work
     async def request_permissions(

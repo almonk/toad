@@ -30,6 +30,7 @@ from toad.widgets.question import Ask, Question
 from toad.messages import UserInputSubmitted
 from toad.slash_command import SlashCommand
 from toad.prompt.extract import extract_paths_from_prompt
+from toad.acp.agent import Mode
 
 
 class AutoCompleteOptions(OptionList, can_focus=False):
@@ -44,6 +45,10 @@ class InvokeFileSearch(Message):
 
 
 class AgentInfo(Label):
+    pass
+
+
+class ModeInfo(Label):
     pass
 
 
@@ -201,6 +206,7 @@ class Prompt(containers.VerticalGroup):
     ask: var[Ask | None] = var(None)
     plan: var[list[Plan.Entry]]
     agent_ready: var[bool] = var(False)
+    current_mode: var[Mode | None] = var(None)
 
     app = getters.app(ToadApp)
 
@@ -220,6 +226,11 @@ class Prompt(containers.VerticalGroup):
     @property
     def text(self) -> str:
         return self.prompt_text_area.text
+
+    def watch_current_mode(self, mode: Mode | None) -> None:
+        self.set_class(mode is not None, "-has-mode")
+        if mode is not None:
+            self.query_one(ModeInfo).with_tooltip(mode.description).update(mode.name)
 
     def watch_agent_ready(self, ready: bool) -> None:
         self.set_class(not ready, "-not-ready")
@@ -495,6 +506,7 @@ class Prompt(containers.VerticalGroup):
         with containers.HorizontalGroup(id="info-container"):
             yield AgentInfo()
             yield CondensedPath().data_bind(path=Prompt.project_path)
+            yield ModeInfo("mode")
 
     def action_dismiss(self) -> None:
         if self.shell_mode:

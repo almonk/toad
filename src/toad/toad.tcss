@@ -375,6 +375,19 @@ Prompt {
             background: $primary 10%;
             width: auto;           
         }
+        ModeInfo {
+            padding: 0 1;
+            margin: 1 1;
+            color: $text-secondary;
+            background: $secondary 10%;
+            width: auto;          
+            dock: right; 
+            display: none;
+        }
+        
+    }
+    &.-has-mode #info-container ModeInfo {
+        display: block;
     }
 
 }

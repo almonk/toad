@@ -3,7 +3,7 @@ import asyncio
 import json
 import os
 from pathlib import Path
-from typing import cast
+from typing import cast, NamedTuple
 from copy import deepcopy
 
 import rich.repr
@@ -24,6 +24,14 @@ from toad import constants
 from toad.answer import Answer
 
 PROTOCOL_VERSION = 1
+
+
+class Mode(NamedTuple):
+    """An agent mode."""
+
+    id: str
+    name: str
+    description: str | None
 
 
 @rich.repr.auto
@@ -59,9 +67,7 @@ class Agent(AgentBase):
         }
         self.auth_methods: list[protocol.AuthMethod] = []
         self.session_id: str = ""
-
         self.tool_calls: dict[str, protocol.ToolCall] = {}
-
         self._message_target: MessagePump | None = None
 
         self._terminal_count: int = 0
@@ -100,7 +106,7 @@ class Agent(AgentBase):
         """Post a message to the message target (the Conversation).
 
         Args:
-            message (_type_): _description_
+            message: Message object.
 
         Returns:
             `True` if the message was posted successfully, or `False` if it wasn't.
@@ -452,6 +458,8 @@ class Agent(AgentBase):
             )
 
         response = await initialize_response.wait()
+        assert response is not None
+
         # Store agents capabilities
         if agent_capabilities := response.get("agentCapabilities"):
             self.agent_capabilities = agent_capabilities
@@ -466,7 +474,18 @@ class Agent(AgentBase):
                 [],
             )
         response = await session_new_response.wait()
+        assert response is not None
         self.session_id = response["sessionId"]
+        if (modes := response.get("modes", None)) is not None:
+            current_mode = modes["currentModeId"]
+            available_modes = modes["availableModes"]
+            modes_update = {
+                mode["id"]: Mode(
+                    mode["id"], mode["name"], mode.get("description", None)
+                )
+                for mode in available_modes
+            }
+            self.post_message(messages.SetModes(current_mode, modes_update))
 
     async def acp_session_prompt(
         self, prompt: list[protocol.ContentBlock]
