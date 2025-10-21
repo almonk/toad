@@ -93,7 +93,6 @@ class ANSILog(ScrollView, can_focus=False):
         self._finalized = False
 
         self.current_directory = ""
-        self.current_directory_updates = 0
 
         super().__init__(name=name, id=id, classes=classes, disabled=disabled)
 
@@ -163,9 +162,6 @@ class ANSILog(ScrollView, can_focus=False):
             return f"```\n{text_content}\n```"
         else:
             return text_content
-
-    def get_line_filters(self) -> Sequence[LineFilter]:
-        return []
 
     def on_mount(self):
         self.anchor()
@@ -273,7 +269,7 @@ class ANSILog(ScrollView, can_focus=False):
                     self.cursor_line = max(0, absolute_y)
             case ANSIWorkingDirectory(path):
                 self.current_directory = path
-                self.current_directory_updates += 1
+                self.finalize()
 
         return added_content
 

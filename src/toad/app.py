@@ -20,6 +20,32 @@ from toad.settings_schema import SCHEMA
 from toad import atomic
 
 
+DRACULA_TERMINAL_THEME = terminal_theme.TerminalTheme(
+    background=(40, 42, 54),  # #282A36
+    foreground=(248, 248, 242),  # #F8F8F2
+    normal=[
+        (33, 34, 44),  # black - #21222C
+        (255, 85, 85),  # red - #FF5555
+        (80, 250, 123),  # green - #50FA7B
+        (241, 250, 140),  # yellow - #F1FA8C
+        (189, 147, 249),  # blue - #BD93F9
+        (255, 121, 198),  # magenta - #FF79C6
+        (139, 233, 253),  # cyan - #8BE9FD
+        (248, 248, 242),  # white - #F8F8F2
+    ],
+    bright=[
+        (98, 114, 164),  # bright black - #6272A4
+        (255, 110, 110),  # bright red - #FF6E6E
+        (105, 255, 148),  # bright green - #69FF94
+        (255, 255, 165),  # bright yellow - #FFFFA5
+        (214, 172, 255),  # bright blue - #D6ACFF
+        (255, 146, 223),  # bright magenta - #FF92DF
+        (164, 255, 255),  # bright cyan - #A4FFFF
+        (255, 255, 255),  # bright white - #FFFFFF
+    ],
+)
+
+
 QUOTES = [
     "I'll be back.",
     "Hasta la vista, baby.",
@@ -254,7 +280,7 @@ class ToadApp(App):
                 json.dumps(settings, indent=4, separators=(", ", ": ")), "utf-8"
             )
             self.notify(f"Wrote default settings to {settings_path}")
-        self.ansi_theme_dark = terminal_theme.DIMMED_MONOKAI
+        self.ansi_theme_dark = DRACULA_TERMINAL_THEME
         self._settings = settings
         self.settings.set_all()
 

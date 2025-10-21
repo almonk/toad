@@ -521,7 +521,7 @@ class Conversation(containers.Vertical):
         if self._ansi_log is not None and not self._ansi_log.is_finalized:
             await self.shell.interrupt()
             self._shell = None
-            self.flash("[b]Interrupted[/b]")
+            self.flash("Command interrupted", style="success")
 
     @work
     @on(acp_messages.CreateTerminal)

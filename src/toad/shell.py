@@ -176,7 +176,7 @@ class Shell:
                         pass
 
                 if line := unicode_decoder.decode(data, final=not data):
-                    if self.ansi_log is None:
+                    if self.ansi_log is None or self.ansi_log.is_finalized:
                         self.ansi_log = await self.conversation.new_ansi_log(
                             self.width, display=False
                         )
