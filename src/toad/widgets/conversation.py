@@ -895,12 +895,12 @@ class Conversation(containers.Vertical):
 
         if command.strip():
             await self.post(ShellResult(command))
-        self.call_after_refresh(
-            self.shell.send,
-            command,
-            self.window.size.width - 2 - self.window.styles.scrollbar_size_vertical,
-            self.window.scrollable_content_region.height - 2,
-        )
+            self.call_after_refresh(
+                self.shell.send,
+                command,
+                self.window.size.width - 2 - self.window.styles.scrollbar_size_vertical,
+                self.window.scrollable_content_region.height - 4,
+            )
 
     def action_cursor_up(self) -> None:
         if not self.contents.displayed_children or self.cursor_offset == 0:

@@ -42,15 +42,15 @@ Toast {
     color: $text-muted;
     .toast--title {        
         color: $text;            
-    }
+    }    
     &.-information {
-        border: round $primary;                     
+        border: round $primary;                          
     }
     &.-warning {
-        border: round $warning;                
+        border: round $warning;                        
     }
     &.-error {
-        border: round $error;          
+        border: round $error;                  
     }    
 }
 
