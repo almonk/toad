@@ -22,6 +22,7 @@ class History:
     def __init__(self, path: Path) -> None:
         self.path = path
         self._lines: list[str] = []
+        self._opened: bool = False
 
     async def open(self) -> bool:
         """Open the history file, read initial lines.
@@ -38,7 +39,8 @@ class History:
                 return False
             return True
 
-        return await asyncio.to_thread(read_history)
+        self._opened = await asyncio.to_thread(read_history)
+        return self._opened
 
     async def append(self, input: str, shell: bool) -> bool:
         """Append a history entry.
@@ -52,6 +54,11 @@ class History:
         """
 
         def write_line() -> bool:
+            """Append a line to the history.
+
+            Returns:
+                `True` on success, `False` if write failed.
+            """
             history_entry: HistoryEntry = {
                 "input": input,
                 "shell": shell,
@@ -66,6 +73,9 @@ class History:
                 return False
             return True
 
+        if not self._opened:
+            await self.open()
+
         return await asyncio.to_thread(write_line)
 
     async def get_entry(self, index: int) -> HistoryEntry:
@@ -77,6 +87,11 @@ class History:
         Returns:
             A history entry dict.
         """
-        entry_line = self._lines[index]
+        if not self._opened:
+            await self.open()
+        try:
+            entry_line = self._lines[index]
+        except IndexError:
+            raise IndexError(f"No history entry at index {index}")
         history_entry: HistoryEntry = json.loads(entry_line)
         return history_entry

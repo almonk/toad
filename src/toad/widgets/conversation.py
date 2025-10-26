@@ -29,12 +29,14 @@ from textual.layout import WidgetPlacement
 
 
 from toad import jsonrpc, messages
+from toad import paths
 from toad.acp import messages as acp_messages
 from toad.app import ToadApp
 from toad.acp import protocol as acp_protocol
 from toad.acp.agent import Mode
 from toad.answer import Answer
 from toad.agent import AgentBase, AgentReady, AgentFail
+from toad.history import History
 from toad.widgets.flash import Flash
 from toad.widgets.menu import Menu
 from toad.widgets.note import Note
@@ -226,6 +228,9 @@ class Conversation(containers.Vertical):
         self._ansi_log: ANSILog | None = None
         self._last_escape_time: float = monotonic()
 
+        self.project_data_path = paths.get_project_data(project_path)
+        self.history = History(self.project_data_path / "history.jsonl")
+
     def compose(self) -> ComposeResult:
         yield Throbber(id="throbber")
         with Window():
@@ -396,6 +401,7 @@ class Conversation(containers.Vertical):
 
     @on(messages.UserInputSubmitted)
     async def on_user_input_submitted(self, event: messages.UserInputSubmitted) -> None:
+        await self.history.append(event.body, event.shell)
         if event.shell:
             await self.post_shell(event.body)
             self.prompt.shell_mode = False
@@ -835,6 +841,13 @@ class Conversation(containers.Vertical):
             anchor=True,
         )
 
+        await self.post(
+            Note(
+                f"project data directory is [$text-success]'{self.project_data_path!s}'"
+            ),
+            anchor=True,
+        )
+
         notes_path = Path(__file__).parent / "../../../notes.md"
         from toad.widgets.markdown_note import MarkdownNote
 
@@ -919,6 +932,7 @@ class Conversation(containers.Vertical):
 
     @property
     def shell(self) -> Shell:
+        """A Shell instance."""
         system = platform.system()
         if system == "Darwin":
             shell_command = self.app.settings.get("shell.macos.run", str, expand=False)
@@ -936,6 +950,11 @@ class Conversation(containers.Vertical):
         return self._shell
 
     async def post_shell(self, command: str) -> None:
+        """Post a command to the shell.
+
+        Args:
+            command: Command to execute.
+        """
         from toad.widgets.shell_result import ShellResult
 
         if command.strip():
