@@ -178,12 +178,26 @@ class PromptTextArea(HighlightedTextArea):
         if self.auto_completes:
             self.post_message(Prompt.AutoCompleteMove(-1))
         else:
+            if self.selection.is_empty:
+                row, _column = self.selection[0]
+                if row == 0 or row == (self.wrapped_document.height - 1):
+                    self.post_message(
+                        messages.HistoryMove(-1, self.shell_mode, self.text)
+                    )
+                    return
             super().action_cursor_up(select)
 
     def action_cursor_down(self, select: bool = False):
         if self.auto_completes:
             self.post_message(Prompt.AutoCompleteMove(+1))
         else:
+            if self.selection.is_empty:
+                row, _column = self.selection[0]
+                if row == 0 or row == (self.wrapped_document.height - 1):
+                    self.post_message(
+                        messages.HistoryMove(+1, self.shell_mode, self.text)
+                    )
+                    return
             super().action_cursor_down(select)
 
     def action_delete_left(self) -> None:

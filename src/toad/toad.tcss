@@ -37,6 +37,7 @@ Note,MarkdownNote {
 }
 
 Toast {    
+    margin: 0 0;
     padding: 0 1;
     background: $background;
     color: $text-muted;

@@ -16,6 +16,15 @@ class WorkFinished(Message):
 
 
 @dataclass
+class HistoryMove(Message):
+    """Getting a new item form history."""
+
+    direction: Literal[-1, +1]
+    shell: bool
+    body: str
+
+
+@dataclass
 class UserInputSubmitted(Message):
     body: str
     shell: bool = False

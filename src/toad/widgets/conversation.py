@@ -203,6 +203,7 @@ class Conversation(containers.Vertical):
     prompt = getters.query_one(Prompt)
     app = getters.app(ToadApp)
     _shell: var[Shell | None] = var(None)
+    history_index: var[int] = var(0)
 
     agent: var[AgentBase | None] = var(None, bindings=True)
     agent_info: var[Content] = var(Content())
@@ -682,6 +683,10 @@ class Conversation(containers.Vertical):
     async def on_acp_set_modes(self, message: acp_messages.SetModes):
         self.modes = message.modes
         self.current_mode = self.modes[message.current_mode]
+
+    @on(messages.HistoryMove)
+    async def on_history_move(self, message: messages.HistoryMove) -> None:
+        self.notify(str(message))
 
     @work
     async def request_permissions(
