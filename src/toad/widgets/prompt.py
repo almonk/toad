@@ -178,7 +178,7 @@ class PromptTextArea(HighlightedTextArea):
         if self.auto_completes:
             self.post_message(Prompt.AutoCompleteMove(-1))
         else:
-            if self.selection.is_empty:
+            if self.selection.is_empty and not select:
                 row, _column = self.selection[0]
                 if row == 0 or row == (self.wrapped_document.height - 1):
                     self.post_message(
@@ -191,7 +191,7 @@ class PromptTextArea(HighlightedTextArea):
         if self.auto_completes:
             self.post_message(Prompt.AutoCompleteMove(+1))
         else:
-            if self.selection.is_empty:
+            if self.selection.is_empty and not select:
                 row, _column = self.selection[0]
                 if row == 0 or row == (self.wrapped_document.height - 1):
                     self.post_message(
@@ -285,6 +285,13 @@ class Prompt(containers.VerticalGroup):
     @property
     def text(self) -> str:
         return self.prompt_text_area.text
+
+    @text.setter
+    def text(self, text: str) -> None:
+        self.prompt_text_area.text = text
+        self.prompt_text_area.selection = Selection.cursor(
+            self.prompt_text_area.get_cursor_line_end_location()
+        )
 
     def watch_current_mode(self, mode: Mode | None) -> None:
         self.set_class(mode is not None, "-has-mode")

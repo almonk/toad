@@ -1,3 +1,5 @@
+import rich.repr
+
 from typing import TypedDict
 
 import asyncio
@@ -12,10 +14,10 @@ class HistoryEntry(TypedDict):
     """An entry in the history file."""
 
     input: str
-    shell: bool
     timestamp: float
 
 
+@rich.repr.auto
 class History:
     """Manages a history file."""
 
@@ -23,6 +25,22 @@ class History:
         self.path = path
         self._lines: list[str] = []
         self._opened: bool = False
+        self._current: str | None = None
+
+    def __rich_repr__(self) -> rich.repr.Result:
+        yield self.path
+
+    @property
+    def current(self) -> str | None:
+        return self._current
+
+    @current.setter
+    def current(self, current: str) -> None:
+        self._current = current
+
+    @property
+    def size(self) -> int:
+        return len(self._lines)
 
     async def open(self) -> bool:
         """Open the history file, read initial lines.
@@ -31,10 +49,16 @@ class History:
             `True` if lines were read, otherwise `False`.
         """
 
+        if self._opened:
+            return True
+
         def read_history() -> bool:
             try:
+                self.path.touch(exist_ok=True)
                 with self.path.open("r") as history_file:
+                    history_file.seek(0)
                     self._lines = history_file.readlines()
+                print(self, self._lines)
             except Exception:
                 return False
             return True
@@ -61,7 +85,6 @@ class History:
             """
             history_entry: HistoryEntry = {
                 "input": input,
-                "shell": shell,
                 "timestamp": time(),
             }
             line = json.dumps(history_entry)
@@ -82,13 +105,18 @@ class History:
         """Get a history entry via its index.
 
         Args:
-            index: Index of entry (supports negative indexing).
+            index: Index of entry. 0 for the last entry, negative indexes for previous entries.
 
         Returns:
             A history entry dict.
         """
+        if index > 0:
+            raise IndexError("History indices must be 0 or negative.")
         if not self._opened:
             await self.open()
+
+        if index == 0:
+            return {"input": self.current or "", "timestamp": time()}
         try:
             entry_line = self._lines[index]
         except IndexError:

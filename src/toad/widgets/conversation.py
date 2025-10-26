@@ -18,6 +18,7 @@ from textual import events
 from textual.actions import SkipAction
 from textual.binding import Binding
 from textual.content import Content
+from textual.geometry import clamp
 from textual.css.query import NoMatches
 from textual.widget import Widget
 from textual.widgets import Static
@@ -203,7 +204,8 @@ class Conversation(containers.Vertical):
     prompt = getters.query_one(Prompt)
     app = getters.app(ToadApp)
     _shell: var[Shell | None] = var(None)
-    history_index: var[int] = var(0)
+    shell_history_index: var[int] = var(0)
+    prompt_history_index: var[int] = var(0)
 
     agent: var[AgentBase | None] = var(None, bindings=True)
     agent_info: var[Content] = var(Content())
@@ -230,7 +232,38 @@ class Conversation(containers.Vertical):
         self._last_escape_time: float = monotonic()
 
         self.project_data_path = paths.get_project_data(project_path)
-        self.history = History(self.project_data_path / "history.jsonl")
+        self.shell_history = History(self.project_data_path / "shell_history.jsonl")
+        self.prompt_history = History(self.project_data_path / "prompt_history.jsonl")
+
+    def validate_shell_history_index(self, index: int) -> int:
+        return clamp(index, -self.shell_history.size, 0)
+
+    def validate_prompt_history_index(self, index: int) -> int:
+        return clamp(index, -self.shell_history.size, 0)
+
+    async def watch_shell_history_index(self, previous_index: int, index: int) -> None:
+        print(previous_index, index)
+        if previous_index == 0:
+            self.shell_history.current = self.prompt.text
+        try:
+            history_entry = await self.shell_history.get_entry(index)
+            self.log(history_entry)
+        except IndexError:
+            pass
+        else:
+            self.prompt.text = history_entry["input"]
+            self.prompt.shell_mode = True
+
+    async def watch_prompt_history_index(self, previous_index: int, index: int) -> None:
+        if previous_index == 0:
+            self.prompt_history.current = self.prompt.text
+        try:
+            history_entry = await self.prompt_history.get_entry(index)
+            self.log(history_entry)
+        except IndexError:
+            pass
+        else:
+            self.prompt.text = history_entry["input"]
 
     def compose(self) -> ComposeResult:
         yield Throbber(id="throbber")
@@ -402,11 +435,12 @@ class Conversation(containers.Vertical):
 
     @on(messages.UserInputSubmitted)
     async def on_user_input_submitted(self, event: messages.UserInputSubmitted) -> None:
-        await self.history.append(event.body, event.shell)
         if event.shell:
+            await self.shell_history.append(event.body, event.shell)
             await self.post_shell(event.body)
             self.prompt.shell_mode = False
         elif text := event.body.strip():
+            await self.prompt_history.append(event.body, event.shell)
             if text.startswith("/"):
                 await self.slash_command(text)
             else:
@@ -686,7 +720,19 @@ class Conversation(containers.Vertical):
 
     @on(messages.HistoryMove)
     async def on_history_move(self, message: messages.HistoryMove) -> None:
-        self.notify(str(message))
+        message.stop()
+        self.log(message)
+        if message.shell or not message.body.strip():
+            print(1)
+            await self.shell_history.open()
+            # print(message)
+            print(self.shell_history.size)
+            self.shell_history_index += message.direction
+            print(self.shell_history_index)
+        else:
+            print(2)
+            await self.prompt_history.open()
+            self.prompt_history_index += message.direction
 
     @work
     async def request_permissions(
@@ -852,17 +898,6 @@ class Conversation(containers.Vertical):
             ),
             anchor=True,
         )
-
-        notes_path = Path(__file__).parent / "../../../notes.md"
-        from toad.widgets.markdown_note import MarkdownNote
-
-        # Notes are a temporary "feature"
-        try:
-            await self.post(
-                MarkdownNote(notes_path.read_text(), name="read_text", classes="note")
-            )
-        except Exception:
-            pass
 
     def watch_agent(self, agent: AgentBase | None) -> None:
         if agent is None:
