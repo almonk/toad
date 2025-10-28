@@ -513,7 +513,6 @@ class Conversation(containers.Vertical):
         if self._ansi_log is not None:
             self._ansi_log.finalize()
         self.working_directory = str(Path(event.path).resolve().absolute())
-        # self.prompt.current_directory.path = event.path
 
     @on(ShellFinished)
     def on_shell_finished(self) -> None:
