@@ -126,6 +126,20 @@ SCHEMA: list[SchemaDict] = [
                 "default": "python\ngit\nls\ncat\ncd\nmv\ncp\ntree\nrm\necho\nrmdir\nmkdir\ntouch\nopen\npwd",
             },
             {
+                "key": "directory_commands",
+                "title": "Directory commands",
+                "help": "List of commands (one per line) which accept only a directory as their first argument (used in tab completion).",
+                "type": "text",
+                "default": "cd\nrmdir",
+            },
+            {
+                "key": "file_commands",
+                "title": "File commands",
+                "help": "List of commands (one per line) which accept only a non-directory as their first argument (used in tab completion).",
+                "type": "text",
+                "default": "cat",
+            },
+            {
                 "key": "macos",
                 "title": "MacOS specific settings",
                 "help": "Edit only if you know what you are doing",

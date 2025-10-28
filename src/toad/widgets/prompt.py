@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from pathlib import Path
 import shlex
-from typing import Callable, Self
+from typing import Callable, Literal, Self, Sequence
 
 from textual import on
 from textual.reactive import var, Initialize
@@ -97,6 +97,8 @@ class PromptTextArea(HighlightedTextArea):
             priority=True,
         ),
     ]
+
+    app = getters.app(ToadApp)
 
     auto_completes: var[list[Option]] = var(list)
     multi_line = var(False, bindings=True)
@@ -251,12 +253,22 @@ class PromptTextArea(HighlightedTextArea):
         post_complete = self.text[cursor_column:]
         shlex_tokens = shlex.split(pre_complete)
 
-        tab_complete, suggestions = await self.path_complete(
-            Path(prompt.working_directory), shlex_tokens[-1]
-        )
+        command = shlex_tokens[0]
 
-        self.log(tab_complete)
-        self.log(suggestions)
+        exclude_node_type: Literal["file"] | Literal["dir"] | None = None
+        if (
+            command
+            in self.app.settings.get("shell.directory_commands", str).splitlines()
+        ):
+            exclude_node_type = "file"
+        elif command in self.app.settings.get("shell.file_commands", str).splitlines():
+            exclude_node_type = "dir"
+
+        tab_complete, suggestions = await self.path_complete(
+            Path(prompt.working_directory),
+            shlex_tokens[-1],
+            exclude_type=exclude_node_type,
+        )
 
         if tab_complete is not None:
             shlex_tokens = shlex_tokens[:-1] + [shlex_tokens[-1] + tab_complete]

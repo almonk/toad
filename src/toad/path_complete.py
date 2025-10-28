@@ -1,6 +1,7 @@
 import asyncio
 import os
 from pathlib import Path
+from typing import Literal, Sequence
 
 
 def longest_common_prefix(strings: list[str]) -> str:
@@ -64,7 +65,11 @@ class PathComplete:
         self.directory_listings: dict[Path, list[Path]] = {}
 
     async def __call__(
-        self, current_working_directory: Path, path: str
+        self,
+        current_working_directory: Path,
+        path: str,
+        *,
+        exclude_type: Literal["file"] | Literal["dir"] | None = None,
     ) -> tuple[str | None, list[str] | None]:
         current_working_directory = (
             current_working_directory.expanduser().resolve().absolute()
@@ -82,16 +87,27 @@ class PathComplete:
             read_task.start()
             listing = await read_task.wait()
 
+        if exclude_type is not None:
+            if exclude_type == "dir":
+                listing = [
+                    listing_path
+                    for listing_path in listing
+                    if not listing_path.is_dir()
+                ]
+            else:
+                listing = [
+                    listing_path for listing_path in listing if listing_path.is_dir()
+                ]
+
         if not node:
             return None, [listing_path.name for listing_path in listing]
 
-        if not (
-            matching_nodes := [
-                listing_path
-                for listing_path in listing
-                if listing_path.name.startswith(node)
-            ]
-        ):
+        matching_nodes = [
+            listing_path
+            for listing_path in listing
+            if listing_path.name.startswith(node)
+        ]
+        if not (matching_nodes):
             # Nothing matches
             return None, None
 
