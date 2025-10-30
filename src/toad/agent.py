@@ -15,6 +15,7 @@ class AgentFail(Message):
     """Agent failed to start."""
 
     message: str
+    details: str = ""
 
 
 class AgentBase(ABC):

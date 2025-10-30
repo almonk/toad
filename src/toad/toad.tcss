@@ -34,7 +34,11 @@ Note,MarkdownNote {
         # Make the tables compact in /about
         width: auto;
     }
+    &.-error {
+        border: heavy $error;
+    }
 }
+
 
 Toast {    
     margin: 0 0;

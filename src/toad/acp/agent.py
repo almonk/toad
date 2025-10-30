@@ -365,8 +365,8 @@ class Agent(AgentBase):
                 env=env,
                 cwd=str(self.project_root_path),
             )
-        except Exception:
-            self.post_message(AgentFail("Failed to start agent"))
+        except Exception as error:
+            self.post_message(AgentFail("Failed to start agent", details=str(error)))
             return
 
         self._task = asyncio.create_task(self.run())
@@ -425,8 +425,13 @@ class Agent(AgentBase):
             tasks.add(asyncio.create_task(call_jsonrpc(agent_data)))
 
         if process.returncode:
+            assert process.stderr is not None
+            fail_details = (await process.stderr.read()).decode("utf-8", "replace")
             self.post_message(
-                AgentFail(f"Agent returned a failure code: [b]{process.returncode}")
+                AgentFail(
+                    f"Agent returned a failure code: [b]{process.returncode}",
+                    details=fail_details,
+                )
             )
 
         agent_output.close()

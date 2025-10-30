@@ -404,9 +404,10 @@ class Conversation(containers.Vertical):
             self.flash(content, style="success")
 
     @on(AgentFail)
-    def on_agent_fail(self, message: AgentFail) -> None:
+    async def on_agent_fail(self, message: AgentFail) -> None:
         self.agent_ready = True
         self.notify(message.message, title="Agent failure", severity="error", timeout=5)
+        await self.post(Note(message.details.strip(), classes="-error"))
 
     @on(messages.WorkStarted)
     def on_work_started(self) -> None:
