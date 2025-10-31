@@ -86,7 +86,7 @@ Plan {
     padding: 1 0 0 1;        
     height: auto;                        
     grid-size: 2;
-    grid-columns: auto auto 1fr;
+    grid-columns: auto 1fr;
     grid-rows: auto;        
 
     .-no-plan {

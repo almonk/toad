@@ -64,11 +64,6 @@ class SideBar(containers.Vertical):
         self.panels: list[SideBar.Panel] = [*panels]
         self.hide = hide
 
-    def pre_layout(self, layout: Layout) -> None:
-        if isinstance(layout, GridLayout):
-            layout.shrink = True
-            layout.expand = True
-
     def compose(self) -> ComposeResult:
         for panel in self.panels:
             yield widgets.Collapsible(
