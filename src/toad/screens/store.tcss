@@ -102,9 +102,7 @@ StoreScreen {
 }
 
 AgentModal {    
-    
     align: center middle;
-
     #container {
         margin: 2 4;
         padding: 0 1 0 0;
@@ -131,10 +129,7 @@ AgentModal {
 }
 
 ActionModal {
-
-    align: center middle;
-    
-
+    align: center middle;    
     #container {
         margin: 3 6;    
         height: 1fr;
@@ -152,8 +147,6 @@ ActionModal {
         }
         Button {            
             width: 100%;
-            
         }
     }
-
 }

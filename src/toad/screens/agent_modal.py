@@ -88,6 +88,7 @@ class AgentModal(ModalScreen):
     @work
     @on(widgets.Button.Pressed)
     async def on_button_pressed(self) -> None:
+        agent = self._agent
         action = self.action_select.value
         assert isinstance(action, str)
         agent_actions = self._agent["actions"]
@@ -114,14 +115,14 @@ class AgentModal(ModalScreen):
         self.action_select.focus()
         return_code = await self.app.push_screen_wait(ActionModal(title, command))
         if return_code == 0 and action in {"install", "install-acp"}:
+            # Add to launcher if we installed something
             if not self.launcher_checkbox.value:
-                self.launcher_checkbox.value = True
                 self.notify(
                     f"{agent['name']} has been added to your launcher",
-                    title="Agent install",
+                    title="Add agent",
+                    severity="information",
                 )
-            # Add to launcher if we installed something
-            self.launcher_checkbox.value = True
+                self.launcher_checkbox.value = True
 
     def watch_action(self, action: str) -> None:
         go_button = self.query_one("#run-action", widgets.Button)

@@ -35,8 +35,8 @@ description = "Test action"
 
 [actions."*".install]
 command = "curl -fsSL https://claude.ai/install.sh | bash &&  npm install -g @zed-industries/claude-code-acp"
-description = "Install Claude Code"
+description = "Install Claude Code + ACP adapter"
 
 [actions."*".install_acp]
 command = "npm install @zed-industries/claude-code-acp"
-description = "Install ACP adapter for Claude Code"
+description = "Install ACP adapter"

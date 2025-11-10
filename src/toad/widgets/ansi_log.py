@@ -292,7 +292,6 @@ class ANSILog(ScrollView, can_focus=False):
         for ansi_command in self._ansi_stream.feed(text):
             if self._handle_ansi_command(ansi_command):
                 added_content = True
-
         return added_content
 
     def _fold_line(self, line_no: int, line: Content, width: int) -> list[LineFold]:

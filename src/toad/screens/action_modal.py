@@ -11,6 +11,8 @@ from toad.widgets.command_pane import CommandPane
 
 
 class ActionModal(ModalScreen):
+    """Executes an action command."""
+
     command_pane = getters.query_one(CommandPane)
     ok_button = getters.query_one("#ok", widgets.Button)
 
@@ -49,12 +51,18 @@ class ActionModal(ModalScreen):
     def on_mount(self) -> None:
         self.ok_button.loading = True
         self.command_pane.border_title = self._title
-        self.command_pane.write(f"$ {self._command}\n")
-        self.command_pane.execute(self._command)
+
+        def write_command() -> None:
+            """Write and execute the command."""
+            self.command_pane.anchor()
+            self.command_pane.write(f"$ {self._command}\n")
+            self.command_pane.execute(self._command)
+
+        self.call_after_refresh(write_command)
 
     @on(widgets.Button.Pressed)
     def on_button_pressed(self) -> None:
-        self.dismiss(self.command_pane._return_code)
+        self.action_dismiss_modal()
 
     def action_dismiss_modal(self) -> None:
-        self.dismiss(self.command_pane._return_code)
+        self.dismiss(self.command_pane.return_code)
