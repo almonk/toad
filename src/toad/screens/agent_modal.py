@@ -109,6 +109,8 @@ class AgentModal(ModalScreen):
         command = command["command"]
 
         agent = self._agent
+        # Focus the select
+        # It's unlikely the user wants to re-run the action
         self.action_select.focus()
         return_code = await self.app.push_screen_wait(ActionModal(title, command))
         if return_code == 0 and action in {"install", "install-acp"}:
@@ -118,6 +120,8 @@ class AgentModal(ModalScreen):
                     f"{agent['name']} has been added to your launcher",
                     title="Agent install",
                 )
+            # Add to launcher if we installed something
+            self.launcher_checkbox.value = True
 
     def watch_action(self, action: str) -> None:
         go_button = self.query_one("#run-action", widgets.Button)
