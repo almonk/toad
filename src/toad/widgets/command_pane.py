@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import os
 import fcntl
 import pty
+import struct
 import termios
 
 
@@ -12,8 +13,6 @@ from textual.message import Message
 
 from toad.shell_read import shell_read
 from toad.widgets.ansi_log import ANSILog
-
-MAX_BUFFER_DURATION = 1 / 60
 
 
 class CommandError(Exception):
@@ -43,10 +42,15 @@ class CommandPane(ANSILog):
         self._execute_task = asyncio.create_task(self._execute(command))
 
     async def _execute(self, command: str) -> None:
+        width, height = self.scrollable_content_region.size
+
         master, slave = pty.openpty()
 
         flags = fcntl.fcntl(master, fcntl.F_GETFL)
         fcntl.fcntl(master, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+
+        size = struct.pack("HHHH", height, width, 0, 0)
+        fcntl.ioctl(master, termios.TIOCSWINSZ, size)
 
         # Get terminal attributes
         attrs = termios.tcgetattr(slave)
@@ -79,6 +83,7 @@ class CommandPane(ANSILog):
             raise CommandError(f"Failed to execute {command!r}; {error}")
 
         os.close(slave)
+
         BUFFER_SIZE = 64 * 1024
         reader = asyncio.StreamReader(BUFFER_SIZE)
         protocol = asyncio.StreamReaderProtocol(reader)
@@ -98,7 +103,7 @@ class CommandPane(ANSILog):
 
         try:
             while True:
-                data = await shell_read(reader, BUFFER_SIZE, MAX_BUFFER_DURATION)
+                data = await shell_read(reader, BUFFER_SIZE)
                 if line := unicode_decoder.decode(data, final=not data):
                     self.write(line)
                 if not data:
@@ -119,7 +124,9 @@ if __name__ == "__main__":
     class CommandApp(App):
         CSS = """
         CommandPane {
-            max-height: 10;
+            background: blue 20%;
+            max-height: 20;
+            # border: green;
         }
         """
 
@@ -128,7 +135,10 @@ if __name__ == "__main__":
 
         def on_mount(self) -> None:
             command_pane = self.query_one(CommandPane)
-            self.call_after_refresh(command_pane.execute, "ls -al")
+            self.call_after_refresh(
+                command_pane.execute,
+                "uv run python scroll_test.py",
+            )
 
     app = CommandApp()
     app.run()

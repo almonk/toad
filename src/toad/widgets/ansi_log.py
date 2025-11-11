@@ -110,11 +110,7 @@ class ANSILog(ScrollView, can_focus=False):
         return self._finalized
 
     def _update_width(self) -> None:
-        window_width = (
-            (self.scrollable_content_region.width or 80)
-            - 1
-            - self.parent.styles.scrollbar_size_vertical
-        )
+        window_width = self.scrollable_content_region.width or 80
         self.max_window_width = max(self.max_window_width, window_width)
         if self.minimum_terminal_width == -1 and window_width:
             self.minimum_terminal_width = window_width
@@ -241,7 +237,6 @@ class ANSILog(ScrollView, can_focus=False):
                             content,
                             line.content[end_replace + 1 :],
                         )
-
                     else:
                         if cursor_line_offset == len(line.content):
                             updated_line = line.content + content
@@ -256,6 +251,7 @@ class ANSILog(ScrollView, can_focus=False):
                     if not previous_content.is_same(folded_line.content):
                         added_content = True
 
+                original_cursor_line = self.cursor_line
                 if delta_x is not None:
                     self.cursor_offset += delta_x
                     while self.cursor_offset > self._width:
@@ -267,6 +263,10 @@ class ANSILog(ScrollView, can_focus=False):
                     self.cursor_offset = absolute_x
                 if absolute_y is not None:
                     self.cursor_line = max(0, absolute_y)
+                # if original_cursor_line != self.cursor_line:
+                #     self.scroll_to_region(
+                #         Region(0, self.cursor_line, 1, 1), x_axis=False, immediate=True
+                #     )
             case ANSIWorkingDirectory(path):
                 self.current_directory = path
                 self.finalize()
@@ -392,7 +392,7 @@ class ANSILog(ScrollView, can_focus=False):
             return Strip.blank(width, rich_style)
 
         unfolded_line = self._lines[line_no]
-        cache_key = (y, unfolded_line.updates)
+        cache_key = (line_no, line_offset, unfolded_line.updates, x, width)
         if not selection:
             cached_strip = self._render_line_cache.get(cache_key)
             if cached_strip is not None:

@@ -1,9 +1,10 @@
 from importlib.metadata import version
 from itertools import zip_longest
+from typing import Self
 
 from textual.binding import Binding
-from textual.color import Color
 from textual.screen import Screen
+from textual import events
 from textual import work
 from textual import getters
 from textual import on
@@ -60,7 +61,7 @@ class AgentItem(containers.VerticalGroup):
 
 class Launcher(containers.VerticalGroup):
     app = getters.app(ToadApp)
-
+    grid_select = getters.query_one("#launcher", GridSelect)
     DIGITS = "123456789ABCDEF"
 
     def __init__(
@@ -73,6 +74,18 @@ class Launcher(containers.VerticalGroup):
     ) -> None:
         self._agents = agents
         super().__init__(name=name, id=id, classes=classes)
+
+    @property
+    def highlighted(self) -> int | None:
+        return self.query_one("#launcher", GridSelect).highlighted
+
+    @highlighted.setter
+    def highlighted(self, value: int) -> None:
+        self.query_one("#launcher", GridSelect).highlighted = value
+
+    def focus(self, scroll_visible: bool = True) -> Self:
+        self.grid_select.focus(scroll_visible=scroll_visible)
+        return self
 
     def compose(self) -> ComposeResult:
         launcher_set = frozenset(
@@ -118,12 +131,23 @@ class StoreScreen(Screen):
 
     FOCUS_GROUP = Binding.Group("Focus")
     BINDINGS = [
-        Binding("tab", "app.focus_next", "Focus Next", group=FOCUS_GROUP),
+        Binding(
+            "tab",
+            "app.focus_next",
+            "Focus Next",
+            group=FOCUS_GROUP,
+        ),
         Binding(
             "shift+tab",
             "app.focus_previous",
             "Focus Previous",
             group=FOCUS_GROUP,
+        ),
+        Binding(
+            "null",
+            "quick_launch",
+            "Quick launch",
+            key_display="1-9 a-f",
         ),
     ]
 
@@ -220,6 +244,26 @@ class StoreScreen(Screen):
         key, value = setting
         if key == "launcher.agents":
             self.launcher.refresh(recompose=True)
+
+    def on_key(self, event: events.Key) -> None:
+        if event.character is None:
+            return
+        if event.character in "123456789abcdef":
+            launch_item_offset = "123456789abcdef".find(event.character)
+            self.launcher.focus()
+            try:
+                launch_item = self.launcher.grid_select.children[launch_item_offset]
+            except IndexError:
+                self.notify(
+                    f"No agent on key [b]{launch_item_offset}",
+                    title="Quick launch",
+                    severity="error",
+                )
+                return
+            self.launcher.highlighted = launch_item_offset
+
+    def action_quick_launch(self) -> None:
+        self.launcher.focus()
 
 
 if __name__ == "__main__":

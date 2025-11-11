@@ -639,10 +639,11 @@ class ANSIStream:
                 case [lines, "", "F"]:
                     return ANSICursor(absolute_x=0, delta_y=-int(lines or 1))
                 case [cells, "", "G"]:
-                    return ANSICursor(absolute_x=+int(cells or 1))
+                    return ANSICursor(absolute_x=+int(cells or 1) - 1)
                 case [row, column, "H"]:
                     return ANSICursor(
-                        absolute_x=int(column or 1) - 1, absolute_y=int(row or 1) - 1
+                        absolute_x=int(column or 1) - 1,
+                        absolute_y=int(row or 1) - 1,
                     )
                 case ["0" | "", "", "J"]:
                     return cls.CLEAR_SCREEN_CURSOR_TO_END

@@ -11,7 +11,6 @@ import struct
 import termios
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
-from time import monotonic
 
 from textual.message import Message
 
@@ -48,13 +47,11 @@ class Shell:
         self,
         conversation: Conversation,
         working_directory: str,
-        max_buffer_duration: float = 1 / 60,
         shell="",
         start="",
     ) -> None:
         self.conversation = conversation
         self.working_directory = working_directory
-        self.max_buffer_duration = max_buffer_duration
 
         self.ansi_log: ANSILog | None = None
         self.new_log: bool = False
@@ -172,7 +169,7 @@ class Shell:
         self._ready_event.set()
         try:
             while True:
-                data = await shell_read(reader, BUFFER_SIZE, self.max_buffer_duration)
+                data = await shell_read(reader, BUFFER_SIZE)
 
                 if line := unicode_decoder.decode(data, final=not data):
                     if self.ansi_log is None or self.ansi_log.is_finalized:
