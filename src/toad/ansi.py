@@ -10,7 +10,7 @@ import io
 from typing import Iterable, Literal, Mapping, NamedTuple, Sequence
 from textual.color import Color
 from textual.style import Style, NULL_STYLE
-from textual.content import Content, EMPTY_CONTENT
+from textual.content import Content
 
 from toad._stream_parser import (
     MatchToken,
@@ -22,6 +22,8 @@ from toad._stream_parser import (
     ParseResult,
 )
 
+from toad.dec import CHARSET_MAP
+
 
 def as_int(text: str) -> int:
     """Convert a string to an integer, or return `0` if conversion is impossible"""
@@ -31,6 +33,43 @@ def as_int(text: str) -> int:
         return int(text)
     except ValueError:
         return 0
+
+
+class ANSIToken:
+    pass
+
+
+@dataclass
+class ANSIContent(ANSIToken):
+    text: str
+
+
+@dataclass
+class Separator(ANSIToken):
+    text: str
+
+
+@dataclass
+class CSI(ANSIToken):
+    text: str
+
+
+@dataclass
+class OSC(ANSIToken):
+    text: str
+
+
+@dataclass
+class DEC(ANSIToken):
+    slot: int
+    character_set: str
+
+
+@dataclass
+class DECInvoke(ANSIToken):
+    gl: int | None = None
+    gr: int | None = None
+    shift: int | None = None
 
 
 class CSIPattern(Pattern):
@@ -84,31 +123,22 @@ class CSIPattern(Pattern):
 
 
 class DECPattern(Pattern):
-    class Match(NamedTuple):
-        slot: int
-        character_set: str
-
     def check(self) -> PatternCheck:
         if (initial_character := (yield)) not in "()*+":
             return False
         slot = "()*+".find(initial_character)
         character_set = yield
-        return self.Match(slot, character_set)
+        return DEC(slot, character_set)
 
 
 class DECInvokePattern(Pattern):
-    class Match(NamedTuple):
-        gl: int | None = None
-        gr: int | None = None
-        shift: int | None = None
-
-    INVOKE_G2_INTO_GL = Match(gl=2)
-    INVOKE_G3_INTO_GL = Match(gl=3)
-    INVOKE_G1_INTO_GR = Match(gr=1)
-    INVOKE_G2_INTO_GR = Match(gr=2)
-    INVOKE_G3_INTO_GR = Match(gr=3)
-    SHIFT_G2 = Match(shift=2)
-    SHIFT_G3 = Match(shift=3)
+    INVOKE_G2_INTO_GL = DECInvoke(gl=2)
+    INVOKE_G3_INTO_GL = DECInvoke(gl=3)
+    INVOKE_G1_INTO_GR = DECInvoke(gr=1)
+    INVOKE_G2_INTO_GR = DECInvoke(gr=2)
+    INVOKE_G3_INTO_GR = DECInvoke(gr=3)
+    SHIFT_G2 = DECInvoke(shift=2)
+    SHIFT_G3 = DECInvoke(shift=3)
 
     INVOKE = {
         "n": INVOKE_G2_INTO_GL,
@@ -196,75 +226,10 @@ SGR_STYLE_MAP: Mapping[int, Style] = {
     107: Style(background=Color(255, 255, 255, ansi=15)),
 }
 
-CHARACTER_SETS = {
-    "B": "ascii",  # US ASCII
-    "A": "uk",  # UK
-    "0": "dec_graphics",  # DEC Special Graphics (line drawing)
-    "<": "dec_supplemental",
-    "4": "dutch",
-    "5": "finnish",
-    "C": "finnish",
-    "R": "french",
-    "Q": "french_canadian",
-    "K": "german",
-}
-
-DEC_GRAPHICS = {
-    # 0x5F: '_',  # underscore (remains unchanged)
-    0x60: "◆",  # ` -> diamond
-    0x61: "▒",  # a -> checkerboard/solid block
-    0x62: "␉",  # b -> HT (Horizontal Tab symbol)
-    0x63: "␌",  # c -> FF (Form Feed symbol)
-    0x64: "␍",  # d -> CR (Carriage Return symbol)
-    0x65: "␊",  # e -> LF (Line Feed symbol)
-    0x66: "°",  # f -> degree symbol
-    0x67: "±",  # g -> plus/minus
-    0x68: "␤",  # h -> NL (New Line symbol)
-    0x69: "␋",  # i -> VT (Vertical Tab symbol)
-    0x6A: "┘",  # j -> lower right corner
-    0x6B: "┐",  # k -> upper right corner
-    0x6C: "┌",  # l -> upper left corner
-    0x6D: "└",  # m -> lower left corner
-    0x6E: "┼",  # n -> crossing lines (plus)
-    0x6F: "⎺",  # o -> scan line 1 (top)
-    0x70: "⎻",  # p -> scan line 3
-    0x71: "─",  # q -> horizontal line (scan line 5)
-    0x72: "⎼",  # r -> scan line 7
-    0x73: "⎽",  # s -> scan line 9 (bottom)
-    0x74: "├",  # t -> left tee (├)
-    0x75: "┤",  # u -> right tee (┤)
-    0x76: "┴",  # v -> bottom tee
-    0x77: "┬",  # w -> top tee
-    0x78: "│",  # x -> vertical bar
-    0x79: "≤",  # y -> less than or equal to
-    0x7A: "≥",  # z -> greater than or equal to
-    0x7B: "π",  # { -> pi
-    0x7C: "≠",  # | -> not equal to
-    0x7D: "£",  # } -> UK pound sign
-    0x7E: "·",  # ~ -> centered dot (bullet)
-}
-
-
-@dataclass
-class ANSIToken:
-    text: str
-
-
-class Separator(ANSIToken):
-    pass
-
-
-@dataclass
-class CSI(ANSIToken):
-    pass
-
-
-@dataclass
-class OSC(ANSIToken):
-    pass
-
 
 class ANSIParser(StreamParser[ANSIToken]):
+    """Parse a stream of text containing escape sequences in to logical tokens."""
+
     def parse(self) -> ParseResult[ANSIToken]:
         NEW_LINE = "\n"
         CARRIAGE_RETURN = "\r"
@@ -281,7 +246,9 @@ class ANSIParser(StreamParser[ANSIToken]):
                         csi=CSIPattern(),
                         osc=OSCPattern(),
                         dec=DECPattern(),
+                        dec_invoke=DECInvokePattern(),
                     )
+
                     if isinstance(token, PatternToken):
                         value = token.value
 
@@ -297,12 +264,18 @@ class ANSIParser(StreamParser[ANSIToken]):
                             ):
                                 osc_data.append(token.text)
                             yield OSC("".join(osc_data))
-                            continue
+
+                        elif isinstance(value, DEC):
+                            yield value
+
+                        elif isinstance(value, DECInvoke):
+                            yield value
+
                 else:
                     yield Separator(token.text)
                 continue
 
-            yield ANSIToken(token.text)
+            yield ANSIContent(token.text)
 
 
 EMPTY_LINE = Content()
@@ -592,8 +565,8 @@ class ANSICursor(NamedTuple):
     """Replace x."""
     absolute_y: int | None = None
     """Replace y."""
-    content: Content | None = None
-    """New content."""
+    text: str | None = None
+    """New text"""
     replace: tuple[int | None, int | None] | None = None
     """Replace range (slice like)."""
 
@@ -602,7 +575,7 @@ class ANSICursor(NamedTuple):
         yield "delta_y", self.delta_y, None
         yield "absolute_x", self.absolute_x, None
         yield "absolute_y", self.absolute_y, None
-        yield "content", self.content, None
+        yield "text", self.text, None
         yield "replace", self.replace, None
 
     def get_replace_offsets(
@@ -624,6 +597,13 @@ class ANSICursor(NamedTuple):
 
 
 @rich.repr.auto
+class ANSIStyle(NamedTuple):
+    """Update style."""
+
+    style: Style
+
+
+@rich.repr.auto
 class ANSIClear(NamedTuple):
     """Enumare for clearing the 'screen'."""
 
@@ -639,8 +619,8 @@ class ANSICursorShow(NamedTuple):
 
 @rich.repr.auto
 class ANSIScrollMargin(NamedTuple):
-    top: int
-    bottom: int
+    top: int | None = None
+    bottom: int | None = None
 
 
 @rich.repr.auto
@@ -658,13 +638,23 @@ class ANSIWorkingDirectory(NamedTuple):
     path: str
 
 
+@rich.repr.auto
+class ANSICharacterSet(NamedTuple):
+    """Updated character set state."""
+
+    dec: DEC | None = None
+    dec_invoke: DECInvoke | None = None
+
+
 type ANSICommand = (
-    ANSICursor
+    ANSIStyle
+    | ANSICursor
     | ANSIClear
     | ANSICursorShow
     | ANSIScrollMargin
     | ANSIAlternateScreen
     | ANSIWorkingDirectory
+    | ANSICharacterSet
 )
 
 
@@ -726,7 +716,7 @@ class ANSIStream:
         """
         print(repr(text))
         for token in self.parser.feed(text):
-            print("TOKEN", repr(token))
+            # print("TOKEN", repr(token))
             if isinstance(token, ANSIToken):
                 yield from self.on_token(token)
 
@@ -735,11 +725,9 @@ class ANSIStream:
         "\r": ANSICursor(absolute_x=0),
         "\x08": ANSICursor(delta_x=-1),
     }
-    CLEAR_LINE_CURSOR_TO_END = ANSICursor(replace=(None, -1), content=EMPTY_CONTENT)
-    CLEAR_LINE_CURSOR_TO_BEGINNING = ANSICursor(
-        replace=(0, None), content=EMPTY_CONTENT
-    )
-    CLEAR_LINE = ANSICursor(replace=(0, -1), content=EMPTY_CONTENT, absolute_x=0)
+    CLEAR_LINE_CURSOR_TO_END = ANSICursor(replace=(None, -1), text="")
+    CLEAR_LINE_CURSOR_TO_BEGINNING = ANSICursor(replace=(0, None), text="")
+    CLEAR_LINE = ANSICursor(replace=(0, -1), text="", absolute_x=0)
     CLEAR_SCREEN_CURSOR_TO_END = ANSIClear("cursor_to_end")
     CLEAR_SCREEN_CURSOR_TO_BEGINNING = ANSIClear("cursor_to_beginning")
     CLEAR_SCREEN = ANSIClear("screen")
@@ -782,6 +770,8 @@ class ANSIStream:
                         absolute_x=int(column or 1) - 1,
                         absolute_y=int(row or 1) - 1,
                     )
+                case [row, "", "d"]:
+                    return ANSICursor(absolute_y=int(row or 1) - 1)
                 case ["0" | "", "", "J"]:
                     return cls.CLEAR_SCREEN_CURSOR_TO_END
                 case ["1", "", "J"]:
@@ -797,7 +787,9 @@ class ANSIStream:
                 case ["2", "", "K"]:
                     return cls.CLEAR_LINE
                 case [top, bottom, "r"]:
-                    return ANSIScrollMargin(int(top), int(bottom))
+                    return ANSIScrollMargin(
+                        int(top) if top else None, int(bottom) if bottom else None
+                    )
                 case _:
                     print("Unknown CSI (a)", repr(csi))
                     return None
@@ -836,16 +828,19 @@ class ANSIStream:
                         self.style = NULL_STYLE
                     else:
                         self.style += sgr_style
+                    yield ANSIStyle(self.style)
                 else:
                     if (ansi_segment := self._parse_csi(csi)) is not None:
                         yield ansi_segment
 
-            case ANSIToken(text):
-                if style := self.style:
-                    content = Content.styled(text, style)
-                else:
-                    content = Content(text)
-                yield ANSICursor(delta_x=len(content), content=content)
+            case DEC():
+                yield ANSICharacterSet(dec=token)
+
+            case DECInvoke():
+                yield ANSICharacterSet(dec_invoke=token)
+
+            case ANSIContent(text):
+                yield ANSICursor(delta_x=len(text), text=text)
 
 
 class LineFold(NamedTuple):
@@ -932,11 +927,47 @@ class Buffer:
 
 @dataclass
 class DECState:
-    slots: list[str] = field(default_factory=lambda: ["B", "B", "<", "0"])
-    gl_slotr = 0
-    gr_slot = 2
+    """The (somewhat bonkers) mechanism for switching characters sets pre-unicode."""
 
-    _translate_table: dict[int, str] = field(default_factory=dict)
+    slots: list[str] = field(default_factory=lambda: ["B", "B", "<", "0"])
+    gl_slot: int = 0
+    gr_slot: int = 2
+    shift: int | None = None
+
+    @property
+    def gl(self) -> str:
+        return self.slots[self.gl_slot]
+
+    @property
+    def gr(self) -> str:
+        return self.slots[self.gr_slot]
+
+    def update(self, dec: DEC | None, dec_invoke: DECInvoke | None) -> None:
+        if dec is not None:
+            self.slots[dec.slot] = dec.character_set
+        elif dec_invoke is not None:
+            if dec_invoke.shift:
+                self.shift = dec_invoke.shift
+            else:
+                if dec_invoke.gl is not None:
+                    self.gl_slot = dec_invoke.gl
+                elif dec_invoke.gr is not None:
+                    self.gr_slot = dec_invoke.gr
+
+    def translate(self, text: str) -> str:
+        translate_table: dict[int, str] | None
+        first_character: str | None = None
+        if self.shift is not None and (
+            translate_table := CHARSET_MAP.get(self.slots[self.shift], None)
+        ):
+            first_character = text[0].translate(translate_table)
+            self.shift = None
+
+        if translate_table := CHARSET_MAP.get(self.gl, None):
+            text = text.translate(translate_table)
+        if first_character is None:
+            return text
+        return f"{first_character}{text}"
 
 
 class TerminalState:
@@ -950,6 +981,9 @@ class TerminalState:
         """Width of the terminal."""
         self.height = height
         """Height of the terminal."""
+
+        self.style = Style()
+        """The current style."""
 
         self.show_cursor = True
         """Is the cursor visible?"""
@@ -965,6 +999,7 @@ class TerminalState:
         """Alternate buffer lines."""
 
         self.dec_state = DECState()
+        """The DEC (character set) state."""
 
         self._updates: int = 0
 
@@ -1056,7 +1091,9 @@ class TerminalState:
     def _handle_ansi_command(self, ansi_command: ANSICommand) -> None:
         print(ansi_command)
         match ansi_command:
-            case ANSICursor(delta_x, delta_y, absolute_x, absolute_y, content, replace):
+            case ANSIStyle(style):
+                self.style = style
+            case ANSICursor(delta_x, delta_y, absolute_x, absolute_y, text, replace):
                 buffer = self.buffer
                 folded_lines = buffer.folded_lines
                 if buffer.cursor_line >= len(folded_lines):
@@ -1067,7 +1104,8 @@ class TerminalState:
                 previous_content = folded_line.content
                 line = buffer.lines[folded_line.line_no]
 
-                if content is not None:
+                if text is not None:
+                    content = Content.styled(self.dec_state.translate(text), self.style)
                     cursor_line_offset = self.get_cursor_line_offset(buffer)
 
                     if cursor_line_offset > len(line.content):
@@ -1083,6 +1121,9 @@ class TerminalState:
                             line.content[:start_replace],
                             content,
                             line.content[end_replace + 1 :],
+                        )
+                        updated_line = updated_line.extend_right(
+                            self.width - updated_line.cell_length
                         )
                     else:
                         if cursor_line_offset == len(line.content):
@@ -1125,9 +1166,15 @@ class TerminalState:
                 while len(self.alternate_buffer.lines) < self.height:
                     self.add_line(self.alternate_buffer, EMPTY_LINE)
 
+            case ANSICharacterSet(dec, dec_invoke):
+                self.dec_state.update(dec, dec_invoke)
+
             case ANSIWorkingDirectory(path):
                 self.current_directory = path
                 # self.finalize()
+
+            case _:
+                print("Unhandled", ansi_command)
 
     def _line_updated(self, buffer: Buffer, line_no: int) -> None:
         """Mark a line has having been udpated.

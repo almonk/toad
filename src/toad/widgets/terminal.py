@@ -157,6 +157,8 @@ class Terminal(ScrollView):
                 except IndexError:
                     pass
 
+        # if line.cell_length < width:
+        #     line = line.extend_right(width - line.cell_length)
         strip = Strip(line.render_segments(visual_style), cell_length=line.cell_length)
 
         if cache_key is not None:
