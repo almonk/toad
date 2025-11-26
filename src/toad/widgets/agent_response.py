@@ -1,5 +1,4 @@
 from pathlib import Path
-from llm import Conversation
 
 from textual.reactive import var
 from textual import work

@@ -1,9 +1,5 @@
 from toad.settings import SchemaDict
 
-import llm
-
-MODEL_CHOICES = sorted([model.model_id for model in llm.get_models()])
-
 
 SCHEMA: list[SchemaDict] = [
     {
