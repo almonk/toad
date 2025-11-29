@@ -167,21 +167,7 @@ class CommandPane(Terminal):
 if __name__ == "__main__":
     from textual.app import App, ComposeResult
 
-    COMMAND = """htop"""
-    # COMMAND = "uv run python -m textual"
-    COMMAND = "uv run python"
-
-    COMMAND = "uv run textual keys"
-    # COMMAND = "uv run python test_scroll1.py"
-
-    COMMAND = "uv run python test_scroll_region.py"
-
-    COMMAND = "uv run python test_scroll_margins.py"
-
-    COMMAND = "htop"
-    # COMMAND = "uv run python test_ind.py"
-    # COMMAND = os.environ["SHELL"]
-    COMMAND = "python test_flow.py"
+    COMMAND = os.environ["SHELL"]
 
     class CommandApp(App):
         CSS = """

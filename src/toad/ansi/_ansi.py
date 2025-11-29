@@ -1081,6 +1081,21 @@ class TerminalState:
             style = self.style
             for line_no in range(self.height):
                 self.add_line(buffer, EMPTY_LINE, style)
+        elif clear == "cursor_to_end":
+            buffer._updated_lines = None
+            folded_cursor_line = buffer.cursor_line
+            cursor_line, cursor_line_offset = buffer.cursor
+            print("cursor line and offset", cursor_line, cursor_line_offset)
+            line = buffer.lines[cursor_line]
+            # line.content = line.content[:cursor_line_offset]
+            # line.folds[:] = self._fold_line(cursor_line, line.content, self.width)
+            # line.updates = self.advance_updates()
+
+            del buffer.lines[cursor_line + 1 :]
+            del buffer.line_to_fold[cursor_line + 1 :]
+            del buffer.folded_lines[folded_cursor_line + 1 :]
+
+            self.update_line(buffer, cursor_line, line.content[:cursor_line_offset])
 
     def scroll_buffer(self, direction: int, lines: int) -> None:
         """Scroll the buffer.
@@ -1393,7 +1408,7 @@ class TerminalState:
         buffer.updates = updates
 
     def update_line(
-        self, buffer: Buffer, line_index: int, line: Content, style: Style
+        self, buffer: Buffer, line_index: int, line: Content, style: Style | None = None
     ) -> None:
         while line_index >= len(buffer.lines):
             self.add_line(buffer, EMPTY_LINE)
@@ -1404,7 +1419,8 @@ class TerminalState:
         )
         line_record = buffer.lines[line_index]
         line_record.content = line
-        line_record.style = style
+        if style is not None:
+            line_record.style = style
         line_record.folds[:] = self._fold_line(
             line_index, line_expanded_tabs, self.width
         )
