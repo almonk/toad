@@ -31,7 +31,7 @@ class Terminal(ScrollView, can_focus=True):
         id: str | None = None,
         classes: str | None = None,
         disabled: bool = False,
-        minimum_terminal_width: int = -1,
+        minimum_terminal_width: int = 0,
         size: tuple[int, int] | None = None,
         get_terminal_dimensions: Callable[[], tuple[int, int]] | None = None,
     ):
@@ -47,16 +47,14 @@ class Terminal(ScrollView, can_focus=True):
         self.state = ansi.TerminalState()
 
         if size is None:
-            self._width: int = (
-                80 if minimum_terminal_width < 0 else minimum_terminal_width
-            )
+            self._width = minimum_terminal_width or 80
             self._height: int = 24
         else:
             width, height = size
             self._width = width
             self._height = height
-            if minimum_terminal_width == -1:
-                self.minimum_terminal_width = width
+
+        self.minimum_terminal_width = self._width
 
         self.max_window_width = 0
         self._escape_time = monotonic()
@@ -135,13 +133,13 @@ class Terminal(ScrollView, can_focus=True):
             width, height = self.scrollable_content_region.size
         else:
             width, height = self._get_terminal_dimensions()
-
         self.update_size(width, height)
 
     def update_size(self, width: int, height: int) -> None:
         self._terminal_render_cache.grow(height * 2)
         self._width = width or 80
         self._height = height or 24
+        self._width = max(self._width, self.minimum_terminal_width)
         self.state.update_size(self._width, height)
         self._terminal_render_cache.clear()
         self.refresh()
@@ -176,7 +174,6 @@ class Terminal(ScrollView, can_focus=True):
         self, scrollback_delta: set[int] | None, alternate_delta: set[int] | None
     ) -> None:
         if self.state.current_directory:
-            print("CURRENT DIRECTORY", self.state.current_directory)
             self.current_directory = self.state.current_directory
             self.finalize()
         width = self.state.width
@@ -244,12 +241,15 @@ class Terminal(ScrollView, can_focus=True):
         state = self.state
         buffer = state.scrollback_buffer
         buffer_offset = 0
+        # If alternate screen is active place it (virtually) at the end
         if y >= len(buffer.folded_lines) and state.alternate_screen:
             buffer_offset = len(buffer.folded_lines)
             buffer = state.alternate_buffer
+        # Get the folded line, which as a one to one relationship with y
         try:
-            folded_line = buffer.folded_lines[y - buffer_offset]
-            line_no, line_offset, offset, line, updates = folded_line
+            folded_line_ = buffer.folded_lines[y - buffer_offset]
+            line_no, line_offset, offset, line, updates = folded_line_
+            print(repr(line.plain))
         except IndexError:
             return Strip.blank(width, rich_style)
 
@@ -261,6 +261,7 @@ class Terminal(ScrollView, can_focus=True):
             updates,
         )
 
+        # Add in cursor
         if (
             not self.hide_cursor
             and state.show_cursor
@@ -274,6 +275,7 @@ class Terminal(ScrollView, can_focus=True):
             )
             cache_key = None
 
+        # get cached strip if there is no selection
         if (
             not selection
             and cache_key is not None
@@ -286,6 +288,7 @@ class Terminal(ScrollView, can_focus=True):
             strip = strip.apply_offsets(x + offset, line_no)
             return strip
 
+        # Apply selection
         if selection is not None and (select_span := selection.get_span(line_no)):
             unfolded_content = line_record.content.expand_tabs(8)
             start, end = select_span
@@ -294,8 +297,8 @@ class Terminal(ScrollView, can_focus=True):
             selection_style = self.screen.get_visual_style("screen--selection")
             unfolded_content = unfolded_content.stylize(selection_style, start, end)
             try:
-                folded_line = self.state._fold_line(line_no, unfolded_content, width)
-                line = folded_line[line_offset].content
+                folded_lines = self.state._fold_line(line_no, unfolded_content, width)
+                line = folded_lines[line_offset].content
                 cache_key = None
             except IndexError:
                 pass

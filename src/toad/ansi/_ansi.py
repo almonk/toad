@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Iterable, Literal, Mapping, NamedTuple
 
-import rich
+import rich.repr
 from rich.cells import cell_len
 
 from textual import events
@@ -957,6 +957,7 @@ class TerminalState:
             self.width = width
         if height is not None:
             self.height = height
+
         if previous_width != width:
             self._reflow()
 
@@ -1371,10 +1372,8 @@ class TerminalState:
         if line_length <= width:
             return [LineFold(line_no, 0, 0, line, updates)]
 
-        # folded_lines = self._wrap_content(line, width)
         folded_lines = line.fold(width)
         offsets = [0, *accumulate(len(line) for line in folded_lines)][:-1]
-
         folds = [
             LineFold(line_no, line_offset, offset, folded_line, updates)
             for line_offset, (offset, folded_line) in enumerate(

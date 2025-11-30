@@ -166,7 +166,7 @@ if __name__ == "__main__":
     from textual.app import App, ComposeResult
 
     COMMAND = os.environ["SHELL"]
-    COMMAND = "python test_input.py"
+    # COMMAND = "python test_input.py"
 
     class CommandApp(App):
         CSS = """
