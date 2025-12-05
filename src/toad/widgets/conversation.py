@@ -198,12 +198,6 @@ class Conversation(containers.Vertical):
             tooltip="Open the mode switcher",
         ),
         Binding(
-            "ctrl+comma,f2",
-            "settings",
-            "Settings",
-            tooltip="Settings screen",
-        ),
-        Binding(
             "ctrl+c",
             "interrupt",
             "Interrupt",
@@ -1326,11 +1320,6 @@ class Conversation(containers.Vertical):
         import webbrowser
 
         webbrowser.open(f"file:///{svg_path}")
-
-    @work
-    async def action_settings(self) -> None:
-        await self.app.push_screen_wait("settings")
-        self.app.save_settings()
 
     async def action_mode_switcher(self) -> None:
         self.prompt.mode_switcher.focus()

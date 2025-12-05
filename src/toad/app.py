@@ -6,6 +6,7 @@ from typing import ClassVar, TYPE_CHECKING
 
 from rich import terminal_theme
 
+from textual import work
 from textual.binding import Binding, BindingType
 from textual.reactive import var, reactive
 from textual.app import App
@@ -219,6 +220,12 @@ class ToadApp(App, inherit_bindings=False):
             priority=True,
         ),
         Binding("ctrl+c", "help_quit", show=False, system=True),
+        Binding(
+            "f2,ctrl+comma",
+            "settings",
+            "Settings",
+            tooltip="Settings screen",
+        ),
     ]
     CSS_PATH = "toad.tcss"
     ALLOW_IN_MAXIMIZED_VIEW = ""
@@ -329,6 +336,11 @@ class ToadApp(App, inherit_bindings=False):
             column_width=ToadApp.column_width,
             scrollbar=ToadApp.scrollbar,
         )
+
+    @work
+    async def action_settings(self) -> None:
+        await self.push_screen_wait("settings")
+        self.save_settings()
 
     def action_help_quit(self) -> None:
         if (time := monotonic()) - self.last_ctrl_c_time <= 5.0:
