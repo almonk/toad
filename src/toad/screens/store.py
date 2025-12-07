@@ -271,7 +271,7 @@ class StoreScreen(Screen):
 
     def get_info(self) -> Content:
         content = Content.assemble(
-            Content.from_markup("Toad"),
+            Content.from_markup("🐸 Toad"),
             pill(f"v{version('toad')}", "$primary-muted", "$text-primary"),
             ("\nThe universal interface for AI in your terminal", "$text-success"),
             (

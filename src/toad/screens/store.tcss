@@ -69,13 +69,8 @@ StoreScreen {
 
     }
 
-    #sponsored-agents {
-        # background: black 15%;
-        # border-top: wide white 10%;
-        # border-bottom: wide white 10%;
-        
+    #sponsored-agents {                
         GridSelect {
-
             margin:0 1;
             grid-gutter: 1;
             keyline: thin white 10%;
