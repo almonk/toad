@@ -928,7 +928,7 @@ class Conversation(containers.Vertical):
 
     def _build_slash_commands(self) -> list[SlashCommand]:
         slash_commands = [
-            SlashCommand("/about", "About Toad"),
+            SlashCommand("/about-toad", "About Toad"),
         ]
         slash_commands.extend(self.agent_slash_commands)
         slash_commands.sort(key=attrgetter("command"))
@@ -986,6 +986,13 @@ class Conversation(containers.Vertical):
         else:
             self.agent_info = agent.get_info()
             self.agent_ready = False
+
+    async def watch_agent_ready(self, ready: bool) -> None:
+        if ready and (agent_data := self._agent_data) is not None:
+            welcome = agent_data.get("welcome", None)
+            from toad.widgets.markdown_note import MarkdownNote
+
+            await self.post(MarkdownNote(welcome))
 
     def on_mouse_down(self, event: events.MouseDown) -> None:
         self._mouse_down_offset = event.screen_offset
@@ -1352,7 +1359,7 @@ class Conversation(containers.Vertical):
                 be forwarded to the agent.
         """
         command, _, parameters = text[1:].partition(" ")
-        if command == "about":
+        if command == "about-toad":
             from toad import about
             from toad.widgets.markdown_note import MarkdownNote
 
@@ -1361,7 +1368,8 @@ class Conversation(containers.Vertical):
             await self.post(MarkdownNote(about_md, classes="about"))
             self.app.copy_to_clipboard(about_md)
             self.notify(
-                "A copy of /about has been placed in your clipboard", title="About"
+                "A copy of /about-about has been placed in your clipboard",
+                title="About",
             )
             return True
         return False

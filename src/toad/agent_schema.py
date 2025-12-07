@@ -62,6 +62,8 @@ class Agent(TypedDict):
     """Tags which identify the agent. Should be empty for now."""
     help: str
     """A Markdown document with additional details regarding the agent."""
+    welcome: NotRequired[str]
+    """A Markdown document shown to the user when the conversation starts."""
     run_command: dict[OS, str]
     """Command to run the agent, by OS or wildcard."""
     actions: dict[OS, dict[Action, Command]]

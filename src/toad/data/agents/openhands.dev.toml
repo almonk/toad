@@ -29,6 +29,14 @@ Scale from one to thousands of agents -- open source, model agnostic, and enterp
 
 '''
 
+welcome = '''
+## The future of software development must be written by engineers
+
+Software development is changing. That change needs to happen in the open, driven by a community of professional developers. That's why OpenHands' software agent is MIT-licensed and trusted by a growing community.
+
+Visit [openhands-dev](https://openhands.dev/) for more information.
+'''
+
 [actions."*".install]
 command = "uv tool install openhands -U --python 3.12"
 bootstral_uv = true
