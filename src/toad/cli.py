@@ -13,6 +13,7 @@ def main(ctx, project_dir: str | None):
         return
     app = ToadApp(mode="store", project_dir=project_dir)
     app.run()
+    app.run_on_exit()
 
 
 @main.command("acp")
@@ -86,6 +87,7 @@ def acp(
         server.serve()
     else:
         app.run()
+    app.run_on_exit()
 
     from rich import print
 

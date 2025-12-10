@@ -16,6 +16,7 @@ from textual.signal import Signal
 from toad.settings import Schema, Settings
 from toad.agent_schema import Agent as AgentData
 from toad.settings_schema import SCHEMA
+from toad.version import VersionMeta
 from toad import paths
 from toad import atomic
 
@@ -235,6 +236,7 @@ class ToadApp(App, inherit_bindings=False):
     column_width: reactive[int] = reactive(100)
     scrollbar: reactive[str] = reactive("normal")
     last_ctrl_c_time = reactive(0.0)
+    update_required: reactive[bool] = reactive(False)
 
     def __init__(
         self,
@@ -246,6 +248,7 @@ class ToadApp(App, inherit_bindings=False):
         self.agent_data = agent_data
         self.project_dir = project_dir
         self._initial_mode = mode
+        self.version_meta: VersionMeta | None = None
         super().__init__()
 
     @property
@@ -320,6 +323,35 @@ class ToadApp(App, inherit_bindings=False):
     def on_mount(self) -> None:
         if mode := self._initial_mode:
             self.switch_mode(mode)
+        self.set_timer(1, self.run_version_check)
+
+    def run_on_exit(self):
+        if self.update_required and self.version_meta is not None:
+            version_meta = self.version_meta
+            from rich.console import Console
+            from rich.panel import Panel
+
+            console = Console()
+            console.print(
+                Panel(
+                    version_meta.upgrade_message,
+                    style="magenta",
+                    border_style="bright_red",
+                    title="🐸 Update available 🐸",
+                    expand=False,
+                    padding=(1, 4),
+                )
+            )
+            console.print(f"Please visit {version_meta.visit_url}")
+
+    @work(exit_on_error=False)
+    async def run_version_check(self) -> None:
+        """Check remote version."""
+        from toad.version import check_version
+
+        update_required, version_meta = await check_version()
+        self.version_meta = version_meta
+        self.update_required = update_required
 
     def get_default_screen(self) -> MainScreen:
         """Make the default screen.
