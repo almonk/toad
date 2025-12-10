@@ -8,6 +8,7 @@ from textual.screen import ModalScreen
 from textual import widgets
 from textual.widget import Widget
 
+from toad.app import ToadApp
 from toad.widgets.command_pane import CommandPane
 
 
@@ -20,10 +21,14 @@ class ActionModal(ModalScreen):
     command_pane = getters.query_one(CommandPane)
     ok_button = getters.query_one("#ok", widgets.Button)
 
+    app = getters.app(ToadApp)
+
     BINDINGS = [("escape", "dismiss_modal", "Dismiss")]
 
     def __init__(
         self,
+        action: str,
+        agent: str,
         title: str,
         command: str,
         *,
@@ -32,6 +37,8 @@ class ActionModal(ModalScreen):
         id: str | None = None,
         classes: str | None = None,
     ) -> None:
+        self._action = action
+        self._agent = agent
         self._title = title
         self._command = command
         self._bootstrap_uv = bootstrap_uv
@@ -66,11 +73,18 @@ class ActionModal(ModalScreen):
         self.command_pane.anchor()
         if self._bootstrap_uv and shutil.which("uv") is None:
             # Bootstrap UV if required
-            self.command_pane.write(f"$ {UV_INSTALL}\n")
+            await self.command_pane.write(f"$ {UV_INSTALL}\n")
             await self.command_pane.execute(UV_INSTALL, final=False)
 
-        self.command_pane.write(f"$ {self._command}\n")
-        await self.command_pane.execute(self._command)
+        await self.command_pane.write(f"$ {self._command}\n")
+        action_task = self.command_pane.execute(self._command)
+        await action_task
+        self.app.capture_event(
+            "agent-action",
+            action=self._action,
+            agent=self._agent,
+            fail=self.command_pane.return_code != 0,
+        )
 
     @on(widgets.Button.Pressed)
     def on_button_pressed(self) -> None:

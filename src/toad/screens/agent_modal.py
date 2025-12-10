@@ -107,6 +107,7 @@ class AgentModal(ModalScreen):
         from toad.screens.action_modal import ActionModal
 
         title = command["description"]
+        agent_id = self._agent["identity"]
         action_command = command["command"]
         bootstrap_uv = command.get("bootstrap_uv", False)
 
@@ -116,6 +117,8 @@ class AgentModal(ModalScreen):
         self.action_select.focus()
         return_code = await self.app.push_screen_wait(
             ActionModal(
+                action,
+                agent_id,
                 title,
                 action_command,
                 bootstrap_uv=bootstrap_uv,

@@ -260,4 +260,19 @@ SCHEMA: list[SchemaDict] = [
             }
         ],
     },
+    {
+        "key": "statistics",
+        "title": "Data collection",
+        "help": "Preferences regarding data collection.",
+        "type": "object",
+        "fields": [
+            {
+                "key": "allow_collect",
+                "title": "Allow collection of anonymous usage data?",
+                "help": "Toad can collect basic usage data (number of installs, OS version, agents used, session length etc). This information is associated with a randomly generated UUID (see it in /about-toad) and contains no personal information.\n\nCollecting this information will help me (Will McGugan) convince big tech to take this project seriously. I would appreciate if you left this on, but it is entirely up to you.",
+                "type": "boolean",
+                "default": True,
+            },
+        ],
+    },
 ]

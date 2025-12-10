@@ -17,6 +17,7 @@ dependencies = [
     "textual-serve>=1.1.2",
     "textual-speedups==0.2.1",
     "packaging>=25.0",
+    "posthog>=7.0.1",
 ]
 
 [tool.uv.workspace]

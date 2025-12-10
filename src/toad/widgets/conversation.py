@@ -251,6 +251,8 @@ class Conversation(containers.Vertical):
         self.shell_history = History(self.project_data_path / "shell_history.jsonl")
         self.prompt_history = History(self.project_data_path / "prompt_history.jsonl")
 
+        self.session_start_time: float | None = None
+
     def validate_shell_history_index(self, index: int) -> int:
         return clamp(index, -self.shell_history.size, 0)
 
@@ -467,15 +469,39 @@ class Conversation(containers.Vertical):
 
     @on(AgentReady)
     async def on_agent_ready(self) -> None:
+        self.session_start_time = monotonic()
         if self.agent is not None:
             content = Content.assemble(self.agent.get_info(), " connected")
             self.flash(content, style="success")
+            if self._agent_data is not None:
+                self.app.capture_event(
+                    "agent-session-begin",
+                    agent=self._agent_data["identity"],
+                )
+
         self.agent_ready = True
+
+    def on_unmount(self) -> None:
+        if self._agent_data is not None and self.session_start_time is not None:
+            session_time = monotonic() - self.session_start_time
+            self.app.capture_event(
+                "agent-session-end",
+                agent=self._agent_data["identity"],
+                duration=session_time,
+            )
 
     @on(AgentFail)
     async def on_agent_fail(self, message: AgentFail) -> None:
         self.agent_ready = True
         self.notify(message.message, title="Agent failure", severity="error", timeout=5)
+
+        if self._agent_data is not None:
+            self.app.capture_event(
+                "agent-session-error",
+                agent=self._agent_data["identity"],
+                message=message.message,
+                details=message.details,
+            )
 
         if message.message:
             error = Content.assemble(

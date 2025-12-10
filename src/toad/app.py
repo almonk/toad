@@ -1,8 +1,9 @@
+import asyncio
 from functools import cached_property
 from pathlib import Path
 import json
 from time import monotonic
-from typing import ClassVar, TYPE_CHECKING
+from typing import Any, ClassVar, TYPE_CHECKING
 
 from rich import terminal_theme
 
@@ -12,6 +13,7 @@ from textual.reactive import var, reactive
 from textual.app import App
 from textual.signal import Signal
 
+from posthog import Posthog
 
 from toad.settings import Schema, Settings
 from toad.agent_schema import Agent as AgentData
@@ -249,6 +251,10 @@ class ToadApp(App, inherit_bindings=False):
         self.project_dir = project_dir
         self._initial_mode = mode
         self.version_meta: VersionMeta | None = None
+        self.posthog = Posthog(
+            project_api_key="phc_mJWPV7GP3ar1i9vxBg2U8aiKsjNgVwum6F6ZggaD4ri",
+            host="https://us.i.posthog.com",
+        )
         super().__init__()
 
     @property
@@ -264,9 +270,49 @@ class ToadApp(App, inherit_bindings=False):
         return Schema(SCHEMA)
 
     @cached_property
+    def version(self) -> str:
+        """Version of the app."""
+        from importlib.metadata import version
+
+        return version("toad")
+
+    @cached_property
     def settings(self) -> Settings:
+        """App settings"""
         return Settings(
             self.settings_schema, self._settings, on_set_callback=self.setting_updated
+        )
+
+    @cached_property
+    def anon_id(self) -> str:
+        """An anonymous ID for usage collection."""
+        if not (anon_id := self.settings.get("anon_id", str, expand=False)):
+            # Create a random UUID on demand
+            import uuid
+
+            anon_id = str(uuid.uuid4())
+            self.settings.set("anon_id", anon_id)
+            self.save_settings()
+            self.call_later(self.capture_event, "toad-install")
+        return anon_id
+
+    @work(exit_on_error=False)
+    async def capture_event(self, event_name: str, **properties: Any) -> None:
+        """Capture an event.
+
+        Args:
+            event_name: Name of the event.
+            **properties: Additional data associated with the event.
+        """
+        if not self.settings.get("statistics.allow_collect", bool):
+            # User has disabled stats
+            return
+        event_properties = {"toad_version": self.version} | properties
+        await asyncio.to_thread(
+            self.posthog.capture,
+            event_name,
+            distinct_id=self.anon_id,
+            properties=event_properties,
         )
 
     def save_settings(self) -> None:
@@ -277,11 +323,6 @@ class ToadApp(App, inherit_bindings=False):
             except Exception as error:
                 self.notify(str(error), title="Settings", severity="error")
             else:
-                # self.notify(
-                #     f"Saved settings to [$text-success]{path!r}",
-                #     title="Settings",
-                #     severity="information",
-                # )
                 self.settings.up_to_date()
 
     def setting_updated(self, key: str, value: object) -> None:
@@ -320,9 +361,11 @@ class ToadApp(App, inherit_bindings=False):
         self._settings = settings
         self.settings.set_all()
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
+        self.capture_event("toad-run")
         if mode := self._initial_mode:
             self.switch_mode(mode)
+        self.anon_id
         self.set_timer(1, self.run_version_check)
 
     def run_on_exit(self):
