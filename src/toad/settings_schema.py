@@ -146,6 +146,13 @@ SCHEMA: list[SchemaDict] = [
         "type": "object",
         "fields": [
             {
+                "key": "warn_dangerous",
+                "title": "Highlight potentially destructive commands?",
+                "help": "If enabled, Toad will highlight potentially destructive commands that may modify the filesystem outside of the project directory.",
+                "type": "boolean",
+                "default": True,
+            },
+            {
                 "key": "allow_commands",
                 "title": "Allow commands",
                 "help": "List of commands (one per line) which should be considered shell commands by default, rather than a part of a prompt.",
@@ -209,13 +216,6 @@ SCHEMA: list[SchemaDict] = [
                         "default": 'PS1=""',
                     },
                 ],
-            },
-            {
-                "key": "warn_dangerous",
-                "title": "Highlight potentially destructive commands?",
-                "help": "If enabled, Toad will highlight potentially destructive commands that may modify the filesystem outside of the project directory.",
-                "type": "boolean",
-                "default": True,
             },
         ],
     },
