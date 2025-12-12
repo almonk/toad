@@ -108,13 +108,13 @@ SCHEMA: list[SchemaDict] = [
                 "help": "Show agent's 'thoughts' in the conversation?",
                 "type": "boolean",
             },
-            {
-                "key": "warn",
-                "title": "Warning against dangerous commands?",
-                "help": "Please note that this can produce false positive [i]and[/i] false negatives. If you get a warning, examine the command more closely. But do not assume a command is safe if you get no warning.\n\nThis setting will have no effect if you have given the agent permissions to execute all commands.",
-                "type": "boolean",
-                "default": True,
-            },
+            # {
+            #     "key": "warn",
+            #     "title": "Warning against dangerous commands?",
+            #     "help": "Please note that this can produce false positive [i]and[/i] false negatives. If you get a warning, examine the command more closely. But do not assume a command is safe if you get no warning.\n\nThis setting will have no effect if you have given the agent permissions to execute all commands.",
+            #     "type": "boolean",
+            #     "default": True,
+            # },
         ],
     },
     {
@@ -147,8 +147,8 @@ SCHEMA: list[SchemaDict] = [
         "fields": [
             {
                 "key": "warn_dangerous",
-                "title": "Highlight potentially destructive commands?",
-                "help": "If enabled, Toad will highlight potentially destructive commands that may modify the filesystem outside of the project directory.",
+                "title": "Warn against potentially destructive commands?",
+                "help": "If enabled, Toad will highlight potentially destructive commands that may modify the filesystem outside of the project directory.\n\nNote that false positive [i]and[/] false negatives are possible.",
                 "type": "boolean",
                 "default": True,
             },
