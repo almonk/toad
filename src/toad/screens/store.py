@@ -339,8 +339,12 @@ class StoreScreen(Screen):
         assert isinstance(event.selected_widget, AgentItem)
         from toad.screens.agent_modal import AgentModal
 
-        await self.app.push_screen_wait(AgentModal(event.selected_widget.agent))
+        modal_response = await self.app.push_screen_wait(
+            AgentModal(event.selected_widget.agent)
+        )
         self.app.save_settings()
+        if modal_response == "launch":
+            self.post_message(LaunchAgent(event.selected_widget.agent["identity"]))
 
     @on(OpenAgentDetails)
     @work
@@ -351,8 +355,10 @@ class StoreScreen(Screen):
             agent = self._agents[message.identity]
         except KeyError:
             return
-        await self.app.push_screen_wait(AgentModal(agent))
+        modal_response = await self.app.push_screen_wait(AgentModal(agent))
         self.app.save_settings()
+        if modal_response == "launch":
+            self.post_message(LaunchAgent(agent["identity"]))
 
     @on(GridSelect.Selected, "#launcher GridSelect")
     @work
@@ -362,8 +368,12 @@ class StoreScreen(Screen):
 
         from toad.screens.agent_modal import AgentModal
 
-        await self.app.push_screen_wait(AgentModal(launcher_item.agent))
+        modal_response = await self.app.push_screen_wait(
+            AgentModal(launcher_item.agent)
+        )
         self.app.save_settings()
+        if modal_response == "launch":
+            self.post_message(LaunchAgent(launcher_item.agent["identity"]))
 
     @work
     async def launch_agent(self, agent_identity: str) -> None:

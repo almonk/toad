@@ -148,8 +148,9 @@ StoreScreen {
 
 AgentModal {    
     align: center middle;
+    # background: $surface 80%;
     #container {
-        margin: 2 4;
+        margin: 2 4 1 4;
         padding: 0 1 0 0;
         max-width: 100;
         height: auto;
@@ -170,6 +171,15 @@ AgentModal {
         Checkbox {
             margin: 0;                        
         }
+    }
+    Footer {        
+        # margin: 0 0 0 0;
+        opacity: 0.0;
+        FooterKey {
+            .footer-key--key {
+                color: $accent !important;            
+            }                    
+        }        
     }
 }
 

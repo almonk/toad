@@ -11,6 +11,7 @@ from textual import widgets
 from textual.reactive import var
 
 import toad
+from textual.binding import Binding
 from toad.agent_schema import Action, Agent, OS, Command
 from toad.app import ToadApp
 
@@ -18,7 +19,10 @@ from toad.app import ToadApp
 class AgentModal(ModalScreen):
     AUTO_FOCUS = "#launcher-checkbox"
 
-    BINDINGS = [("escape", "dismiss", "Dismiss")]
+    BINDINGS = [
+        Binding("escape", "dismiss(None)", "Dismiss", show=False),
+        Binding("space", "dismiss('launch')", "Launch agent", priority=True),
+    ]
 
     action = var("")
 
@@ -70,6 +74,10 @@ class AgentModal(ModalScreen):
                     yield widgets.Button(
                         "Go", variant="primary", id="run-action", disabled=True
                     )
+        yield widgets.Footer()
+
+    def on_mount(self) -> None:
+        self.query_one("Footer").styles.animate("opacity", 1.0, duration=500 / 1000)
 
     @on(widgets.Checkbox.Changed)
     def on_checkbox_changed(self, event: widgets.Select.Changed) -> None:

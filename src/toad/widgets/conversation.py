@@ -59,6 +59,22 @@ if TYPE_CHECKING:
     from toad.widgets.terminal_tool import TerminalTool
 
 
+AGENT_FAIL_HELP = """\
+## Agent failed to run
+
+**The agent failed to start.**
+
+Check that the agent is installed and up-to-date.
+
+- Exit the app, and run `toad` agin
+- Select the agent and hit ENTER
+- Click the dropdown, select "Install"
+- Click the GO button
+
+If that fails, please file a bug!
+"""
+
+
 class Loading(Static):
     """Tiny widget to show loading indicator."""
 
@@ -512,6 +528,10 @@ class Conversation(containers.Vertical):
         else:
             error = Content.from_markup(message.details.strip()).stylize("$text-error")
         await self.post(Note(error, classes="-error"))
+
+        from toad.widgets.markdown_note import MarkdownNote
+
+        await self.post(MarkdownNote(AGENT_FAIL_HELP))
 
     @on(messages.WorkStarted)
     def on_work_started(self) -> None:

@@ -13,7 +13,7 @@ publisher_url = "https://willmcgugan.github.io/"
 type = "coding"
 description = "The AI coding agent built for the terminal with client/server architecture and ACP support via adapter."
 tags = []
-run_command."*" = "opencode-acp"
+run_command."*" = "opencode acp"
 
 help = '''
 # OpenCode
@@ -57,5 +57,5 @@ https://github.com/josephschmitt/opencode-acp
 '''
 
 [actions."*".install]
-command = "npm install -g opencode"
+command = "npm i -g opencode-ai"
 description = "Install OpenCode"
