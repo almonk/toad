@@ -74,6 +74,7 @@ class SlashComplete(containers.VerticalGroup):
         yield widgets.OptionList()
 
     def focus(self, scroll_visible: bool = False) -> Self:
+        self.filter_slash_commands("")
         self.input.focus(scroll_visible)
         return self
 

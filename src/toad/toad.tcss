@@ -268,10 +268,7 @@ Conversation {
         padding: 0 1 0 0;
         margin: 1 0;
         overflow: scroll;
-        scrollbar-size: 0 0;  
-        # &.-finalized {            
-        # }
-        
+        scrollbar-size: 0 0;          
     }
 
     TerminalTool {
@@ -312,8 +309,7 @@ Conversation {
 }
 
 
-Welcome {
-    
+Welcome {    
     height: auto;       
     #logo {
         color: $text-success;        
@@ -327,8 +323,7 @@ Welcome {
 
 
 
-Prompt {
-            
+Prompt {            
     padding: 0 0 0 0;    
     height: auto;  
     dock: bottom;  
@@ -337,11 +332,7 @@ Prompt {
         #prompt-container:focus-within {
             border: tall $primary;
         }
-    }
-
-    # &.-not-ready {        
-    
-    # }
+    }    
 
     PathSearch, SlashComplete {
         display: none;
@@ -361,7 +352,6 @@ Prompt {
             }
         }
     }
-
 
     &.-show-path-search {
         PathSearch {
@@ -456,35 +446,14 @@ Prompt {
             width: auto;          
             dock: right; 
             display: none;
-        }
-        
+        }        
     }
+
     &.-has-mode #info-container ModeInfo {
         display: block;
     }
 
 }
-
-# AutoCompleteOptions {    
-#     max-height: 50vh;
-    
-#     border: none;
-#     padding: 0;
-#     width: auto;
-#     max-width: 100;
-    
-#     overlay: screen;
-#     overflow: hidden;
-#     constrain: inside inflect;    
-#     min-width: 12;    
-#     margin: 1 0;
-#     height: auto;    
-        
-#     & > .option-list--option {
-#         padding: 0 1;
-#     }
-# }
-
 
 
 ModeInfo:hover {
@@ -658,8 +627,7 @@ HelpPanel {
             color: $text-muted;
         }
         .bindings-table--key {
-            color: $text;
-            # text-style: not bold;
+            color: $text;            
         }
         &> BindingsTable > .bindings-table--header {        
             color: $text-warning;
