@@ -109,7 +109,8 @@ class HighlightedTextArea(TextArea):
         if self._highlight_lines is None:
             text = self.text
             if text.startswith("/") and "\n" not in text:
-                content = Content.styled(text, "$text-success")
+                content = self.highlight_slash_command(text)
+
                 self._highlight_lines = [content]
                 return self._highlight_lines
 
@@ -125,6 +126,9 @@ class HighlightedTextArea(TextArea):
             else:
                 raise ValueError("highlight_language must be `markdown` or `shell`")
         return self._highlight_lines
+
+    def highlight_slash_command(self, text: str) -> Content:
+        return Content.styled(text, "$text-success")
 
     def highlight_markdown(self, text: str) -> Content:
         """Highlight markdown content.
