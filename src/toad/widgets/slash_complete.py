@@ -98,10 +98,13 @@ class SlashComplete(containers.VerticalGroup):
         Args:
             prompt: Text prompt.
         """
-        prompt = prompt.lstrip("/")
+        prompt = prompt.lstrip("/").casefold()
         columns = self.columns = Columns("auto", "flex")
 
-        slash_commands = self.slash_commands
+        slash_commands = sorted(
+            self.slash_commands,
+            key=lambda slash_command: slash_command.command.casefold(),
+        )
         deduplicated_slash_commands = {
             slash_command.command: slash_command for slash_command in slash_commands
         }
@@ -115,9 +118,26 @@ class SlashComplete(containers.VerticalGroup):
                 )
                 for slash_command in slash_commands
             ]
+
             scores = sorted(
-                [score for score in scores if score[0]], key=itemgetter(0), reverse=True
+                [
+                    (
+                        (
+                            score * 2
+                            if slash_command.command.casefold()[1:].startswith(prompt)
+                            else score
+                        ),
+                        highlights,
+                        slash_command,
+                    )
+                    for score, highlights, slash_command in scores
+                    if score
+                ],
+                key=itemgetter(0),
+                reverse=True,
             )
+
+            self.log(scores[:10])
         else:
             scores = [(1.0, [], slash_command) for slash_command in slash_commands]
 
