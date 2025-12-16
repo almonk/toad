@@ -425,6 +425,10 @@ class Prompt(containers.VerticalGroup):
             self.prompt_text_area.get_cursor_line_end_location()
         )
 
+    def on_mouse_up(self) -> None:
+        if not self.has_focus:
+            self.focus()
+
     def watch_current_mode(self, mode: Mode | None) -> None:
         self.set_class(mode is not None, "-has-mode")
         if mode is not None:
