@@ -54,6 +54,7 @@ class AgentModal(ModalScreen):
         script_choices = [
             (action["description"], name) for name, action in commands.items()
         ]
+        script_choices.append((f"Launch {agent['name']}", "__launch__"))
 
         with containers.Vertical(id="container"):
             with containers.VerticalScroll(id="description-container"):
@@ -98,7 +99,12 @@ class AgentModal(ModalScreen):
     async def on_button_pressed(self) -> None:
         agent = self._agent
         action = self.action_select.value
+
         assert isinstance(action, str)
+        if action == "__launch__":
+            self.dismiss("launch")
+            return
+
         agent_actions = self._agent["actions"]
 
         if (commands := agent_actions.get(toad.os, None)) is None:
@@ -123,6 +129,7 @@ class AgentModal(ModalScreen):
         # Focus the select
         # It's unlikely the user wants to re-run the action
         self.action_select.focus()
+
         return_code = await self.app.push_screen_wait(
             ActionModal(
                 action,
