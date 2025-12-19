@@ -583,6 +583,67 @@ class Conversation(containers.Vertical):
             if (mode := modes.get(event.current_mode)) is not None:
                 self.current_mode = mode
 
+    @on(messages.ModelSelected)
+    async def on_model_selected(self, event: messages.ModelSelected) -> None:
+        """Handle model selection from the models picker."""
+        if self._agent_data is None:
+            return
+
+        import shlex
+
+        # Get current run command
+        current_command = self._agent_data.get("run_command", {}).get("*", "")
+
+        # Parse the command to modify --agent-name
+        try:
+            parts = shlex.split(current_command)
+        except ValueError:
+            parts = current_command.split()
+
+        # Find and replace --agent-name parameter
+        new_parts = []
+        skip_next = False
+        found_agent_name = False
+        for i, part in enumerate(parts):
+            if skip_next:
+                skip_next = False
+                continue
+            if part == "--agent-name":
+                new_parts.append(part)
+                new_parts.append(event.model)
+                skip_next = True
+                found_agent_name = True
+            elif part.startswith("--agent-name="):
+                new_parts.append(f"--agent-name={event.model}")
+                found_agent_name = True
+            else:
+                new_parts.append(part)
+
+        # If --agent-name wasn't found, add it
+        if not found_agent_name:
+            new_parts.append("--agent-name")
+            new_parts.append(event.model)
+
+        new_command = shlex.join(new_parts)
+
+        # Update agent data
+        self._agent_data["run_command"]["*"] = new_command
+        self._agent_data["name"] = event.model
+
+        # Cancel current agent and restart
+        if self.agent is not None:
+            await self.agent.cancel()
+
+        from toad.acp.agent import Agent
+
+        self.agent = Agent(self.project_path, self._agent_data)
+        self.agent.start(self)
+
+        self.flash(
+            Content.from_markup("Switched to model [b]$model", model=event.model),
+            style="success",
+        )
+
     @on(messages.UserInputSubmitted)
     async def on_user_input_submitted(self, event: messages.UserInputSubmitted) -> None:
         if not event.body.strip():
@@ -1009,6 +1070,7 @@ class Conversation(containers.Vertical):
     def _build_slash_commands(self) -> list[SlashCommand]:
         slash_commands = [
             SlashCommand("/about-toad", "About Toad"),
+            SlashCommand("/models", "Switch to a different model"),
         ]
         slash_commands.extend(self.agent_slash_commands)
         deduplicated_slash_commands = {
@@ -1418,5 +1480,8 @@ class Conversation(containers.Vertical):
                 "A copy of /about-toad has been placed in your clipboard",
                 title="About",
             )
+            return True
+        elif command == "models":
+            self.prompt.show_models_picker = True
             return True
         return False
