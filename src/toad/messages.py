@@ -72,3 +72,10 @@ class Flash(Message):
 
 class ProjectDirectoryUpdated(Message):
     """The project directory may may changed."""
+
+
+@dataclass
+class ModelSelected(Message):
+    """A model was selected from the models picker."""
+
+    model: str
