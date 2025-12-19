@@ -27,6 +27,7 @@ from toad.widgets.path_search import PathSearch
 from toad.widgets.plan import Plan
 from toad.widgets.question import Ask, Question
 from toad.widgets.slash_complete import SlashComplete
+from toad.widgets.models_picker import ModelsPicker
 from toad.messages import UserInputSubmitted
 from toad.slash_command import SlashCommand
 from toad.prompt.extract import extract_paths_from_prompt
@@ -406,6 +407,7 @@ class Prompt(containers.VerticalGroup):
     current_directory = getters.query_one(CondensedPath)
     path_search = getters.query_one(PathSearch)
     slash_complete = getters.query_one(SlashComplete)
+    models_picker = getters.query_one(ModelsPicker)
     question = getters.query_one(Question)
     mode_switcher = getters.query_one(ModeSwitcher)
 
@@ -414,6 +416,7 @@ class Prompt(containers.VerticalGroup):
     multi_line = var(False)
     show_path_search = var(False, toggle_class="-show-path-search", bindings=True)
     show_slash_complete = var(False, toggle_class="-show-slash-complete", bindings=True)
+    show_models_picker = var(False, toggle_class="-show-models-picker", bindings=True)
     project_path = var(Path())
     working_directory = var("")
     agent_info = var(Content(""))
@@ -562,7 +565,7 @@ class Prompt(containers.VerticalGroup):
             self.remove_class("-shell-mode")
 
             self.prompt_text_area.placeholder = Content.assemble(
-                "What would you like to do?\t".expandtabs(8),
+                "Ask poolside something...?\t".expandtabs(8),
                 ("▌!▐", "r"),
                 " shell ",
                 ("▌/▐", "r"),
@@ -609,6 +612,11 @@ class Prompt(containers.VerticalGroup):
 
     def watch_show_slash_complete(self, show: bool) -> None:
         self.slash_complete.focus()
+
+    async def watch_show_models_picker(self, show: bool) -> None:
+        if show:
+            await self.models_picker.load_models()
+            self.models_picker.focus()
 
     @on(PromptTextArea.RequestShellMode)
     def on_request_shell_mode(self, event: PromptTextArea.RequestShellMode):
@@ -661,6 +669,16 @@ class Prompt(containers.VerticalGroup):
         elif event.widget is self.path_search:
             self.show_path_search = False
             self.focus()
+        elif event.widget is self.models_picker:
+            self.show_models_picker = False
+            self.focus()
+
+    @on(ModelsPicker.ModelSelected)
+    def on_model_selected(self, event: ModelsPicker.ModelSelected) -> None:
+        event.stop()
+        self.show_models_picker = False
+        self.post_message(messages.ModelSelected(event.model))
+        self.focus()
 
     @on(messages.InsertPath)
     def on_insert_path(self, event: messages.InsertPath) -> None:
@@ -700,6 +718,8 @@ class Prompt(containers.VerticalGroup):
     def compose(self) -> ComposeResult:
         yield PathSearch().data_bind(root=Prompt.project_path)
         yield SlashComplete().data_bind(slash_commands=Prompt.slash_commands)
+        yield ModelsPicker()
+
         with containers.HorizontalGroup(id="prompt-container"):
             yield Question()
             with containers.HorizontalGroup(id="text-prompt"):
