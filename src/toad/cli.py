@@ -88,10 +88,27 @@ def run(port: int, host: str, serve: bool, project_dir: str = ".", agent: str = 
 
         agent_data = asyncio.run(get_agent_data(agent))
     else:
-        agent_data = None
+        # Default to pool acp agent
+        agent_data: Agent = {
+            "identity": "pool.custom.batrachian.ai",
+            "name": "laguna_agent_1120",
+            "short_name": "pool",
+            "url": "https://github.com/batrachianai/toad",
+            "protocol": "acp",
+            "type": "coding",
+            "author_name": "Poolside",
+            "author_url": "https://poolside.ai/",
+            "publisher_name": "Poolside",
+            "publisher_url": "https://poolside.ai/",
+            "description": "Poolside agent",
+            "tags": [],
+            "help": "",
+            "run_command": {"*": "pool acp --debug --no-fetch-models --agent-name laguna_agent_1120"},
+            "actions": {},
+        }
 
     app = ToadApp(
-        mode=None if agent_data else "store",
+        mode=None,
         agent_data=agent_data,
         project_dir=project_dir,
     )
