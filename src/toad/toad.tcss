@@ -1,5 +1,9 @@
+Screen {
+    background: transparent;
+}
+
 .block {
-    margin: 1 1 1 0;  
+    margin: 1 1 1 0;
 }
 
 
@@ -339,15 +343,89 @@ Conversation {
 }
 
 
-Welcome {    
-    height: auto;       
+Welcome {
+    height: auto;
     #logo {
-        color: $text-success;        
+        color: $text-success;
     }
-    #message {        
+    #message {
         padding: 0;
         width: 1fr;
         height: auto;
+    }
+}
+
+EmptyState {
+    width: 1fr;
+    height: 1fr;
+    align: center middle;
+    background: transparent;
+
+    Center {
+        background: transparent;
+    }
+
+    .empty-state-content {
+        width: 100%;
+        height: auto;
+        align: center top;
+        background: transparent;
+    }
+
+    .logo-container {
+        width: 100%;
+        height: auto;
+        background: transparent;
+    }
+
+    .logo {
+        width: 9;
+        height: 4;
+        margin: 0 0 2 0;
+        background: transparent;
+    }
+
+    .title {
+        width: 100%;
+        content-align: center middle;
+        color: $text;
+        text-style: bold;
+        margin: 0 0 1 0;
+        background: transparent;
+    }
+
+    .subtitle {
+        width: 100%;
+        content-align: center middle;
+        color: $text-muted;
+        margin: 0 0 2 0;
+        background: transparent;
+    }
+
+    .hints {
+        width: auto;
+        height: auto;
+        padding: 1 0 0 0;
+    }
+
+    KeyHint {
+        width: auto;
+        height: auto;
+        margin: 0 0 1 0;
+    }
+
+    KeyHint .key {
+        width: 4;
+        text-align: center;
+        color: $primary;
+        margin: 0 2 0 0;
+        padding: 0 1;
+        background: $primary 15%;
+    }
+
+    KeyHint .description {
+        width: auto;
+        color: $text-muted;
     }
 }
 
@@ -537,8 +615,8 @@ ModeSwitcher {
     }
 }
 
-MainScreen {    
-    background: $background;
+MainScreen {
+    background: transparent;
     layers: screen base;
 
 

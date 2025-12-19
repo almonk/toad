@@ -19,6 +19,7 @@ dependencies = [
     "packaging>=25.0",    
     "bashlex>=0.18",
     "pathspec>=0.12.1",
+    "textual-image>=0.8.4",
 ]
 
 [tool.uv.workspace]

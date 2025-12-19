@@ -40,6 +40,7 @@ from toad.acp.agent import Mode
 from toad.answer import Answer
 from toad.agent import AgentBase, AgentReady, AgentFail
 from toad.history import History
+from toad.widgets.empty_state import EmptyState
 from toad.widgets.flash import Flash
 from toad.widgets.menu import Menu
 from toad.widgets.note import Note
@@ -232,6 +233,7 @@ class Conversation(containers.Vertical):
     window = getters.query_one(Window)
     cursor = getters.query_one(Cursor)
     prompt = getters.query_one(Prompt)
+    empty_state = getters.query_one(EmptyState)
     app = getters.app(ToadApp)
 
     _shell: var[Shell | None] = var(None)
@@ -318,6 +320,7 @@ class Conversation(containers.Vertical):
     def compose(self) -> ComposeResult:
         yield Throbber(id="throbber")
         with Window():
+            yield EmptyState()
             with ContentsGrid():
                 with containers.VerticalGroup(id="cursor-container"):
                     yield Cursor()
@@ -504,8 +507,6 @@ class Conversation(containers.Vertical):
     async def on_agent_ready(self) -> None:
         self.session_start_time = monotonic()
         if self.agent is not None:
-            content = Content.assemble(self.agent.get_info(), " connected")
-            self.flash(content, style="success")
             if self._agent_data is not None:
                 self.app.capture_event(
                     "agent-session-begin",
@@ -1130,9 +1131,10 @@ class Conversation(containers.Vertical):
     async def watch_agent_ready(self, ready: bool) -> None:
         if ready and (agent_data := self._agent_data) is not None:
             welcome = agent_data.get("welcome", None)
-            from toad.widgets.markdown_note import MarkdownNote
+            if welcome:
+                from toad.widgets.markdown_note import MarkdownNote
 
-            await self.post(MarkdownNote(welcome))
+                await self.post(MarkdownNote(welcome))
 
     def on_mouse_down(self, event: events.MouseDown) -> None:
         self._mouse_down_offset = event.screen_offset
@@ -1179,6 +1181,8 @@ class Conversation(containers.Vertical):
             await self._loading.remove()
         if not self.contents.is_attached:
             return widget
+        # Hide empty state when content is posted
+        self.empty_state.display = False
         await self.contents.mount(widget)
         widget.loading = loading
         if anchor:

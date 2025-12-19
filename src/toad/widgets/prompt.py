@@ -565,7 +565,7 @@ class Prompt(containers.VerticalGroup):
             self.remove_class("-shell-mode")
 
             self.prompt_text_area.placeholder = Content.assemble(
-                "Ask poolside something...?\t".expandtabs(8),
+                "Ask poolside something...\t".expandtabs(8),
                 ("▌!▐", "r"),
                 " shell ",
                 ("▌/▐", "r"),
