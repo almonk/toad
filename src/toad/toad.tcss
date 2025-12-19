@@ -359,11 +359,11 @@ Prompt {
    
     &.-shell-mode {
         #prompt-container:focus-within {
-            border: tall $primary;
+            border: round $primary;
         }
     }    
 
-    PathSearch, SlashComplete {
+    PathSearch, SlashComplete, ModelsPicker {
         display: none;
         height: auto;
         Input {
@@ -372,12 +372,12 @@ Prompt {
         }
         OptionList {
             border: none;
-            height: 10;           
+            height: 10;
             padding: 0;
-            margin: 0 1;                     
+            margin: 0 1;
             overflow: hidden;
             & > .option-list--option {
-                padding: 0 1;            
+                padding: 0 1;
             }
         }
     }
@@ -390,6 +390,12 @@ Prompt {
 
     &.-show-slash-complete {
         SlashComplete {
+            display: block;
+        }
+    }
+
+    &.-show-models-picker {
+        ModelsPicker {
             display: block;
         }
     }
@@ -418,12 +424,12 @@ Prompt {
         }
         height: auto;
         
-        border: tall transparent;
+        border: round transparent;
         border-subtitle-align: left;
         border-subtitle-style: reverse;
         
         &:focus-within {
-            border: tall $secondary;            
+            border: round $secondary;            
             #prompt {
                 text-opacity: 100%;
             }
