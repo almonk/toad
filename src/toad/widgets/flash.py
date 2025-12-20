@@ -22,8 +22,7 @@ class Flash(Static):
         text-wrap: nowrap;
         text-overflow: ellipsis;     
         # overlay: screen;
-        # offset-y: -1;   
-
+        # offset-y: -1;           
         &.-default {
             background: $primary 10%;
             color: $text-primary;

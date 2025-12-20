@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from asyncio import Future
-from typing import Mapping, TYPE_CHECKING
+from typing import Any, Mapping, TYPE_CHECKING
 from textual.message import Message
 
 import rich.repr
@@ -25,6 +25,11 @@ class AgentMessage(Message):
 class Thinking(AgentMessage):
     type: str
     text: str
+
+
+@dataclass
+class UpdateStatusLine(AgentMessage):
+    status_line: str
 
 
 @dataclass

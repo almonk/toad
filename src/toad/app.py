@@ -367,8 +367,16 @@ class ToadApp(App, inherit_bindings=False):
         elif key == "ui.scrollbar":
             if isinstance(value, str):
                 self.scrollbar = value
+        elif key == "ui.compact-input":
+            self.set_class(bool(value), "-compact-input")
         elif key == "ui.footer":
             self.set_class(not bool(value), "-hide-footer")
+        elif key == "ui.status-line":
+            self.set_class(not bool(value), "-hide-status-line")
+        elif key == "ui.agent-title":
+            self.set_class(not bool(value), "-hide-agent-title")
+        elif key == "ui.info-bar":
+            self.set_class(not bool(value), "-hide-info-bar")
         elif key == "agent.thoughts":
             self.set_class(not bool(value), "-hide-thoughts")
         elif key == "sidebar.hide":

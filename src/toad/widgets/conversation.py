@@ -233,6 +233,7 @@ class Conversation(containers.Vertical):
     cursor = getters.query_one(Cursor)
     prompt = getters.query_one(Prompt)
     app = getters.app(ToadApp)
+
     _shell: var[Shell | None] = var(None)
     shell_history_index: var[int] = var(0, init=False)
     prompt_history_index: var[int] = var(0, init=False)
@@ -243,6 +244,7 @@ class Conversation(containers.Vertical):
     modes: var[dict[str, Mode]] = var({}, bindings=True)
     current_mode: var[Mode | None] = var(None)
     turn: var[Literal["agent", "client"] | None] = var(None, bindings=True)
+    status: var[str] = var("")
 
     def __init__(self, project_path: Path, agent: AgentData | None = None) -> None:
         super().__init__()
@@ -328,6 +330,7 @@ class Conversation(containers.Vertical):
             agent_ready=Conversation.agent_ready,
             current_mode=Conversation.current_mode,
             modes=Conversation.modes,
+            status=Conversation.status,
         )
 
     @property
@@ -663,6 +666,10 @@ class Conversation(containers.Vertical):
 
     def watch_busy_count(self, busy: int) -> None:
         self.throbber.set_class(busy > 0, "-busy")
+
+    @on(acp_messages.UpdateStatusLine)
+    async def on_update_status_line(self, message: acp_messages.UpdateStatusLine):
+        self.status = message.status_line
 
     @on(acp_messages.Update)
     async def on_acp_agent_message(self, message: acp_messages.Update):

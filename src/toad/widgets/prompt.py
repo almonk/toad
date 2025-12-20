@@ -62,6 +62,15 @@ class ModeInfo(Label):
     pass
 
 
+class StatusLine(Label):
+    status: var[str] = var("")
+
+    def watch_status(self, status: str) -> None:
+        self.set_class(not bool(status), "-hidden")
+        self.update(status)
+        self.tooltip = status
+
+
 class PromptTextArea(HighlightedTextArea):
     BINDING_GROUP_TITLE = "Prompt"
 
@@ -399,6 +408,7 @@ class Prompt(containers.VerticalGroup):
     agent_ready: var[bool] = var(False)
     current_mode: var[Mode | None] = var(None)
     modes: var[dict[str, Mode] | None] = var(None)
+    status: var[str] = var("")
 
     app = getters.app(ToadApp)
 
@@ -676,7 +686,6 @@ class Prompt(containers.VerticalGroup):
     def compose(self) -> ComposeResult:
         yield PathSearch().data_bind(root=Prompt.project_path)
         yield SlashComplete().data_bind(slash_commands=Prompt.slash_commands)
-
         with containers.HorizontalGroup(id="prompt-container"):
             yield Question()
             with containers.HorizontalGroup(id="text-prompt"):
@@ -689,10 +698,10 @@ class Prompt(containers.VerticalGroup):
                     working_directory=Prompt.working_directory,
                     slash_commands=Prompt.slash_commands,
                 )
-
         with containers.HorizontalGroup(id="info-container"):
             yield AgentInfo()
             yield CondensedPath().data_bind(path=Prompt.working_directory)
+            yield StatusLine(markup=False).data_bind(status=Prompt.status)
             yield ModeSwitcher()
             yield ModeInfo("mode")
 

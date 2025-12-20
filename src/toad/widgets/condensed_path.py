@@ -1,10 +1,12 @@
+from functools import lru_cache
 import os.path
 from typing import Iterable
 
 from rich.cells import cell_len
-from textual.widgets import Static
+from textual.geometry import Size
 from textual.reactive import reactive
 from textual.content import Content
+from textual.widget import Widget
 
 
 def radiate_range(total: int) -> Iterable[tuple[int, int]]:
@@ -29,6 +31,7 @@ def radiate_range(total: int) -> Iterable[tuple[int, int]]:
             yield (left + 1, right)
 
 
+@lru_cache(maxsize=16)
 def condense_path(path: str, width: int, *, prefix: str = "") -> str:
     """Condense a path to fit within the given cell width.
 
@@ -41,7 +44,7 @@ def condense_path(path: str, width: int, *, prefix: str = "") -> str:
         A condensed string.
     """
     # TODO: handle OS separators and path issues
-    if cell_len(path) < width:
+    if cell_len(path) <= width:
         return path
     components = path.split("/")
     condensed = components
@@ -61,8 +64,9 @@ def condense_path(path: str, width: int, *, prefix: str = "") -> str:
     return candidate
 
 
-class CondensedPath(Static):
+class CondensedPath(Widget):
     path = reactive("")
+    display_path = reactive("")
 
     def on_resize(self) -> None:
         self.watch_path(self.path)
@@ -77,6 +81,13 @@ class CondensedPath(Static):
             user_root += "/"
         if path.startswith(user_root):
             path = "~/" + path[len(user_root) :]
-        if self.is_mounted:
-            condensed_path = Content(condense_path(path, self.size.width))
-            self.update(condensed_path)
+        self.display_path = path
+
+    def render(self) -> Content:
+        return Content(condense_path(self.display_path, self.size.width))
+
+    def get_content_width(self, container: Size, viewport: Size) -> int:
+        if self.display_path:
+            return Content(self.display_path).cell_length
+        else:
+            return container.width

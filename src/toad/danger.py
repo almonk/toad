@@ -327,13 +327,13 @@ def analyze(
                 word = command_line[slice(*command_node.pos)]
                 if change_directory:
                     try:
-                        root_path = (root_path / Path(word).expanduser()).resolve()
+                        root_path = (root_path / Path(word)).expanduser().resolve()
                     except OSError:
                         pass
                     continue
 
                 try:
-                    target_path = (root_path / Path(word).expanduser()).resolve()
+                    target_path = (root_path / Path(word)).expanduser().resolve()
                 except OSError:
                     continue
                 if level == DangerLevel.DANGEROUS and not target_path.is_relative_to(

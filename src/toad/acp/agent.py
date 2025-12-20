@@ -3,7 +3,7 @@ import asyncio
 import json
 import os
 from pathlib import Path
-from typing import cast, NamedTuple
+from typing import Any, cast, NamedTuple
 from copy import deepcopy
 
 import rich.repr
@@ -125,11 +125,19 @@ class Agent(AgentBase):
         return message_target.post_message(message)
 
     @jsonrpc.expose("session/update")
-    def rpc_session_update(self, sessionId: str, update: protocol.SessionUpdate):
+    def rpc_session_update(
+        self, sessionId: str, update: protocol.SessionUpdate, _meta: dict[str, Any]
+    ):
         """Agent requests an update.
 
         https://agentclientprotocol.com/protocol/schema
         """
+        status_line: str | None = None
+        if (field_meta := _meta.get("field_meta")) is not None:
+            if (
+                open_hands_metrics := field_meta.get("openhands.dev/metrics")
+            ) is not None:
+                status_line = open_hands_metrics.get("status_line")
 
         match update:
             case {
@@ -189,6 +197,9 @@ class Agent(AgentBase):
 
             case {"sessionUpdate": "current_mode_update", "currentModeId": mode_id}:
                 self.post_message(messages.ModeUpdate(mode_id))
+
+        if status_line is not None:
+            self.post_message(messages.UpdateStatusLine(status_line))
 
     @jsonrpc.expose("session/request_permission")
     async def rpc_request_permission(

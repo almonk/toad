@@ -22,8 +22,17 @@ Throbber {
     display: none;
 }
 
-App.-hide-footer Footer {
-    display: none;
+App.-hide-footer {
+    
+    #info-container {
+        display: none;
+    }
+    Footer {
+        display: none;
+        #info-container {
+            display: none;
+        }    
+    }
 }
 
 App.-hide-thoughts AgentThought {
@@ -35,6 +44,28 @@ App.-hide-sidebar SideBar {
     &:focus-within {            
         display: block;
     }
+}
+
+App.-hide-status-line StatusLine {
+    display: none;        
+}
+
+App.-hide-agent-title AgentInfo {
+    display: none;
+}
+
+App.-hide-info-bar #info-container {
+    height: 1;
+    visibility: hidden;
+}
+
+App.-compact-input Prompt #prompt-container {
+    border: none;
+}
+
+Checkbox {
+    # TODO: Bug in Textual?
+    text-overflow: clip;    
 }
 
 Note,MarkdownNote {
@@ -128,7 +159,6 @@ SideBar Plan {
 
 
 Conversation {
-    
         
     Window {        
         layout: stream;
@@ -322,7 +352,6 @@ Welcome {
 }
 
 
-
 Prompt {            
     padding: 0 0 0 0;    
     height: auto;  
@@ -423,14 +452,8 @@ Prompt {
     }
     
     #info-container {                
-        height: auto;        
-        CondensedPath {            
-            margin: 1 1;
-            width: 1fr;
-            height: 1;
-            text-wrap: nowrap;
-            color: $text-warning;            
-        }
+        height: 3;       
+                
         AgentInfo {
             padding: 0 1;
             margin: 1 1;
@@ -438,12 +461,30 @@ Prompt {
             background: $primary 10%;
             width: auto;           
         }
+
+        CondensedPath {                 
+            margin: 1 1;
+            width: 1fr;            
+            height: 1;
+            text-wrap: nowrap;
+            color: $text-warning;            
+        }
+
+        StatusLine {            
+            color: $secondary 70%;    
+            margin: 1 0;
+            width: auto;
+            height: 1;    
+            text-align: right;            
+            text-wrap: nowrap;
+            text-overflow: ellipsis;                           
+        }
+        
         ModeInfo {
             padding: 0 1;
             margin: 1 1;
             color: $text-secondary;
             background: $secondary 10%;
-            width: auto;          
             dock: right; 
             display: none;
         }        
